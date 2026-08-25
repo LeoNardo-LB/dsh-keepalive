@@ -20,6 +20,12 @@
 - 20:15 全量构建绿：lib/（host tsc）+ lib/client.js 23834B（module-table 格式，banner 与 failover 产物同构）。commit 5f06482。
 - 20:16 schema 隐患修复：schemastery 无 z.null()；model 未指定改为省略字段；面板 toggle 不再展开整行。typecheck 0 errors + 36/36。commit（fix(config)）。
 - 20:17 Docker E2E 启动（bash-2 后台）：node:26 镜像 + 双 mock provider + 7 场景 driver；注意本轮镜像构建上下文发送于 schema 修复之前，正式证据以最终代码重建重跑为准。
+- 20:22 容器第 1 轮暴露：bundle 层已 insert 插件行，overlay 再 insert 同 id → duplicate loader entry id（fail-loud）。修：overlay 改 id 定向 config 覆盖。
+- 20:26 容器第 2 轮暴露：storage 域名不许连字符（^[a-z][a-z0-9_]*$）。修：域名改 dsh_keepalive。
+- 20:27 修复期间发现 host 半忽略行 config（apply 未接参）→ settings base 层接线，e2e overlay 配置由此生效。
+- 20:31 容器第 3 轮：6/7 PASS；s2 history=fail——pi-ai 把缺 finish/usage 的瘦 SSE 归为 TRANSPORT 失败。修：mock SSE 补全 OpenAI 形状（role delta/finish_reason:stop/usage chunk）。
+- 20:36 容器第 4 轮（bash-6，最终代码）：**7/7 ALL SCENARIOS PASS**——s1 路由与双提供商、s2 fire-now 全链路（http+history ok+消息形状）、s3 调度精度 scheduledShotDeltaMs=8ms、s4 暂停/恢复、s5 停放+停放后拒绝+恢复、s6 重排、s7 静默 sessions=0。证据：e2e/evidence/driver-evidence.json。
+- 20:41 重启补发专项（bash-8，挂载脚本进同镜像）：杀 dsh→睡过 deadline→重启→**恰好 1 发补发**（before=0 after=1）。RESTART TEST PASS。证据：e2e/evidence/restart-web-{1,2}.log。
 
 ## 完结迁移区
 
