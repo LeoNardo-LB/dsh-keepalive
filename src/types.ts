@@ -62,6 +62,8 @@ export interface StatusSnapshot {
   enabled: boolean
   config: KeepaliveConfig
   providers: ProviderStatus[]
+  /** Whether scheduling is manually paused (engine-level pause). */
+  paused: boolean
   /** Server clock for client-side countdown calibration. */
   now: number
 }

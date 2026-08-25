@@ -74,14 +74,13 @@ function parseIntOr(value: string | null, fallback: number): number {
 export function createRoutes(deps: RoutesDeps): RouteHandlers {
   async function status(_req: IncomingMessage, res: ServerResponse): Promise<void> {
     const cfg = deps.config()
-    const snapshot: StatusSnapshot = {
+    sendJson(res, 200, {
       enabled: cfg.enabled,
       config: cfg,
       providers: deps.engine.snapshot(),
-      now: deps.now(),
-      paused: deps.engine.isPaused()
-    } as StatusSnapshot & { paused: boolean }
-    sendJson(res, 200, snapshot)
+      paused: deps.engine.isPaused(),
+      now: deps.now()
+    } satisfies StatusSnapshot)
   }
 
   async function history(req: IncomingMessage, res: ServerResponse): Promise<void> {

@@ -18,8 +18,20 @@ const EXTERNALS = [
   '@deepseek-ai/dsh-client-ui-conversation/client'
 ]
 
+// Assembled with String.raw so backslash escapes survive every write path.
+const BANNER = String.raw`window.__ModuleLoader__.load({
+	id: "dsh-keepalive",
+	factory: (require) => {
+		var module = { exports: {} };
+		var exports = module.exports;
+		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });`
+const FOOTER = String.raw`
+		return module.exports;
+	}
+});`
+
 const result = await build({
-  entryPoints: ['src/client/index.ts'],
+  entryPoints: ['src/client/index.tsx'],
   bundle: true,
   format: 'cjs',
   platform: 'browser',
@@ -28,18 +40,10 @@ const result = await build({
   external: EXTERNALS,
   write: false,
   banner: {
-    js: 'window.__ModuleLoader__.load({
-	id: "dsh-keepalive",
-	factory: (require) => {
-		var module = { exports: {} };
-		var exports = module.exports;
-		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });'
+    js: BANNER
   },
   footer: {
-    js: '
-		return module.exports;
-	}
-});'
+    js: FOOTER
   }
 })
 

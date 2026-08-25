@@ -1,0 +1,1 @@
+{"version":3,"file":"deck.d.ts","sourceRoot":"","sources":["../src/deck.ts"],"names":[],"mappings":"AAAA;;;GAGG;AAEH,MAAM,WAAW,UAAU;IACzB,mDAAmD;IACnD,IAAI,IAAI,MAAM,CAAA;CACf;AAED,mDAAmD;AACnD,wBAAgB,gBAAgB,CAAC,IAAI,EAAE,MAAM,EAAE,IAAI,EAAE,MAAM,MAAM,GAAG,UAAU,CAmB7E"}
