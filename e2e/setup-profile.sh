@@ -26,20 +26,20 @@ WS_EOF
 dsh plugin --profile web add /plugin
 
 cat > /e2e/e2e-overlay.yml << OVERLAY_EOF
-# E2E overlay: mock providers + keepalive cadence (schema clamps interval to
-# >=1min, so the driver drives speed via catch-up + fire-now + history reads).
-- insert:
-    - id: dsh-keepalive
-      name: 'dsh-keepalive'
-      config:
+# E2E overlay: mock providers + keepalive cadence. The plugin row itself is
+# inserted by the bundle layer (dsh plugin add reconciled the package patch);
+# this overlay only OVERRIDES its config by id (a second insert would be a
+# duplicate loader entry id and fail loud at boot).
+- id: dsh-keepalive
+  config:
+    enabled: true
+    intervalMinutes: 1
+    jitterPercent: 20
+    providers:
+      mock-primary:
         enabled: true
-        intervalMinutes: 1
-        jitterPercent: 20
-        providers:
-          mock-primary:
-            enabled: true
-          mock-backup:
-            enabled: true
+      mock-backup:
+        enabled: true
 - id: llm-pi-ai
   config:
     providers:
