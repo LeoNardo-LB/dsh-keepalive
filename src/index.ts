@@ -62,18 +62,20 @@ interface OpenedDomain {
 let historySeq = 0
 
 /**
- * Install dsh-keepalive. Async init runs as a guarded background task so the
- * plugin activates synchronously; failures log loudly instead of throwing
- * into the fiber (the panel surfaces the empty state).
+ * Install dsh-keepalive. The composition-layer entry config flows in as the
+ * settings namespace base layer (below user settings): dev overlays seed
+ * defaults, the user document stays the live-adjustable truth. Async init
+ * runs as a guarded background task so the plugin activates synchronously;
+ * failures log loudly instead of throwing into the fiber.
  */
-export function apply(ctx: Context): void {
+export function apply(ctx: Context, config: Partial<KeepaliveConfig> = {}): void {
   const logger = {
     info: (message: string): void => ctx.logger.info(message),
     warn: (message: string): void => ctx.logger.warn(message)
   }
 
   const init = async (): Promise<void> => {
-    const scope: SettingsScope<KeepaliveConfig> = ctx.settings.register(NAMESPACE, Config)
+    const scope: SettingsScope<KeepaliveConfig> = ctx.settings.register(NAMESPACE, Config, { base: config })
 
     // First run: prefill the provider map with every registered route so the
     // user only flips the master switch (master stays OFF until confirmed).

@@ -1,33 +1,30 @@
 # 2026-08-25 <批次：plugin-bootstrap>
 
-> 状态：<进行中 / 部分完结 / 已完结>
-> 关联：<backlog #编号> · <spec 文件名（如有）>
+> 状态：进行中
+> 关联：backlog #2 · 2026-08-25-keepalive-v1.md
 
 ## 目标
 
-<本批次要完成什么，一两句>
+实现 dsh-keepalive v1 双半边插件（21 问 grill 共识），完成 Docker 容器实机验证并交付。
 
 ## 过程与证据
 
-<按时间追加：做了什么、观测到什么、证据文件路径（截图/日志/dump 落盘路径）>
-<验证输出直接粘贴（含执行时间与结果）>
+- 20:01 环境探测：docker 27.5.1（daemon OK）/ node v26.7.0 / pnpm 11.21.0 / dsh 0.1.1-rc.2 / registry PONG（bash 实测）。
+- 20:02 规范系统部署：init.sh --no-example，门禁 1-10 全绿（PIPE_EXIT=0）；补填 AGENTS/CONTEXT/stack-profile；spec 与 backlog #2/#3 登记。commit ad74ec9。
+- 20:03 TDD 红态：vitest 4 failed / 16 passed（短语 104≠100、正则 \\+ 转义被写管道吞成量词、零时区测试依赖运行环境时区）。
+- 20:05 TDD 绿态：vitest 20/20（短语修剪至 100、message 测试改用独立真相源 Intl longOffset、正则改字符类免转义）。commit d7298f9。
+- 20:10 签名直查（安装树 d.ts）：WebRoute={kind,path,handler}；SettingsScope=get/watch/update/replace；timer ctx.timeout(callback,delay)；GenerateOptions+StreamChunk+finish.reason 五 kind；zod 4.4.3（storage-domain 用）。
+- 20:11 API 精查子代理交付（/home/leo-tkp/workspace/dsh-0.1.1-rc.2-api-report.md）：Domain 是 .table(name) 方法非 .tables 属性——修正 index.ts；slots.register 的 inject 是工厂函数；座位表（shell.overlay=list/root，conversation.composer.dock=list/session）。
+- 20:12 host 半全绿：typecheck 0 errors + vitest 36/36（引擎 10 用例：钳制/调度/补发/停放/手动控制）。commit 26d2a74。
+- 20:14 client 半：store（5s 轮询+本地倒计时）/Dock/Panel；入口 .ts→.tsx；build-client.mjs banner 转义被写管道吞——改 String.raw 组装。
+- 20:15 全量构建绿：lib/（host tsc）+ lib/client.js 23834B（module-table 格式，banner 与 failover 产物同构）。commit 5f06482。
+- 20:16 schema 隐患修复：schemastery 无 z.null()；model 未指定改为省略字段；面板 toggle 不再展开整行。typecheck 0 errors + 36/36。commit（fix(config)）。
+- 20:17 Docker E2E 启动（bash-2 后台）：node:26 镜像 + 双 mock provider + 7 场景 driver；注意本轮镜像构建上下文发送于 schema 修复之前，正式证据以最终代码重建重跑为准。
 
 ## 完结迁移区
 
-<验收通过后：backlog 卡片原文逐字迁入此处（不压缩不删改），backlog 删除原卡片>
+（验收通过后迁入）
 
 ## 蒸馏（可选）
 
-<可复用的结论提炼到 docs/research/ 后在此写文件名>
-
-<!--
-本文件由 scripts/new-batch.sh 实例化（自动替换：日期与批次名）。
-模板纪律（实例化后保留本注释或删除均可）：
-  1. 开工时创建，过程实时写入；不事后补写——证据失真、遗漏
-  2. 只追加不改写：历史轮次记录保持原样——差异分析失真
-  3. 完结条目原文迁入（不压缩不删改）——历史信息丢失
-  4. journal 只记执行与证据；可复用结论蒸馏进 docs/research/——蒸馏结论埋没
-  5. 命名 YYYY-MM-DD-<kebab>.md——排序与检索失效（check.sh 门禁 10）
-  6. 本文件不写相对 md 链接（从 docs/journal/ 出发易断链）；引用文档用纯文本路径
-配套：workflows/requirements.md（迁移规则）、templates/backlog-entry.md、templates/verification-node.md
--->
+（待定）

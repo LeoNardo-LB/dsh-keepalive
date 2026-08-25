@@ -1,0 +1,15 @@
+# Changelog
+
+本文件记录 dsh-keepalive 的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循语义化版本。
+
+## [0.1.0-dev.1] - 2026-08-25
+
+### 新增
+
+- 抖动调度引擎：每提供商独立定时器、60s 下限钳制、重启补发、连续失败自动停放、手动暂停/恢复/立即发送。
+- 静默保活发送：`ctx.llm.stream` + `maxTokens: 1` 读完整个流；100 条中文短语洗牌队列 + ISO8601 时间戳 + 8 位 hex。
+- 持久化：storageDomain 域 `dsh-keepalive`（历史环 500 条 + 按天统计 90 天 + nextFireAt 补发映射）。
+- HTTP 面：`/plugins/dsh-keepalive/{status,history,config,action}`。
+- Web 面板：composer.dock 摘要条 + shell.overlay 全页面板（提供商/历史/统计/配置）。
+- 设置 namespace `dsh-keepalive`（热生效）+ 首次预填 active 提供商。
+- Docker E2E：真实 web profile + 双 mock provider + 7 场景 driver。
