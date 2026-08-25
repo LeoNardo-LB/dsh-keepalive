@@ -48,9 +48,13 @@ const server = createServer((req, res) => {
       const userText = parsed?.messages?.[parsed.messages.length - 1]?.content
       const text = typeof userText === 'string' ? userText.slice(0, 20) : Array.isArray(userText) ? String(userText[0]?.text ?? '').slice(0, 20) : ''
       if (parsed?.stream === true) {
-        res.writeHead(200, { 'content-type': 'text/event-stream' })
+        // Full OpenAI SSE shape: content delta, finish chunk, usage chunk, [DONE].
+        res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' })
         const frame = (obj) => res.write('data: ' + JSON.stringify(obj) + '\n\n')
-        frame({ id: 'mock', object: 'chat.completion.chunk', choices: [{ index: 0, delta: { content: 'ok:' + text }, finish_reason: null }] })
+        const id = 'chatcmpl-mock-' + String(Date.now())
+        frame({ id, object: 'chat.completion.chunk', created: Math.floor(Date.now() / 1000), model: parsed?.model ?? 'mock', choices: [{ index: 0, delta: { role: 'assistant', content: 'ok:' + text }, finish_reason: null }] })
+        frame({ id, object: 'chat.completion.chunk', created: Math.floor(Date.now() / 1000), model: parsed?.model ?? 'mock', choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] })
+        frame({ id, object: 'chat.completion.chunk', created: Math.floor(Date.now() / 1000), model: parsed?.model ?? 'mock', choices: [], usage: { prompt_tokens: 5, completion_tokens: 1, total_tokens: 6 } })
         res.write('data: [DONE]\n\n')
         res.end()
       } else {

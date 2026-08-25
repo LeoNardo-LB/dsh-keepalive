@@ -95,7 +95,7 @@ await waitFor('webserver up', async () => (await fetch(WEB).catch(() => null)) !
   record(
     's2-fire-now',
     fired.ok && after === before + 1 && shot.status === 'ok' && messageOk && contentOk,
-    'http=' + String(after === before + 1) + ' history=' + shot.status + ' msgShape=' + String(messageOk && contentOk)
+    'http=' + String(after === before + 1) + ' history=' + shot.status + ' msgShape=' + String(messageOk && contentOk) + ' error=' + String(shot.error ?? 'none')
   )
 }
 
