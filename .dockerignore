@@ -1,0 +1,9 @@
+node_modules
+.git
+ai-dev-guide
+docs
+backlog.md
+CONTEXT.md
+AGENTS.md
+e2e/evidence
+*.log
