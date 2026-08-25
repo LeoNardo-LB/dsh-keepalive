@@ -23,9 +23,13 @@ const dailyStat = zod.object({
   latencyTotalMs: zod.number()
 })
 
-/** The keepalive domain: name is the unit name under $DSH_HOME/storages. */
+/**
+ * The keepalive domain: name is the unit name under $DSH_HOME/storages.
+ * Unit names must match /^[a-z][a-z0-9_]*$/ (no hyphens) - storage-domain
+ * validates at module load and fails loud otherwise.
+ */
 export const keepaliveDomain = defineDomain({
-  name: 'dsh-keepalive',
+  name: 'dsh_keepalive',
   version: 1,
   global: {
     schema: zod.object({ nextFireAt: zod.record(zod.string(), zod.number()) }),
