@@ -1,0 +1,5 @@
+# dsh-keepalive bundle patch: inserts the plugin into any profile that
+# adds this package as a bundle (dsh plugin add / bundles list).
+- insert:
+    - id: dsh-keepalive
+      name: 'dsh-keepalive'
