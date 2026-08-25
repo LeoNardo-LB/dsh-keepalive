@@ -8,6 +8,7 @@ import type { KeepaliveConfig } from './types.ts'
 
 const providerConfig = z.object({
   enabled: z.boolean().default(true),
+  /** Absent (omitted) = the provider's default model; never written as null. */
   model: z.string()
 })
 

@@ -59,7 +59,7 @@ function parseProviders(raw: unknown): Record<string, ProviderConfig> | undefine
     const model = entry.model
     out[id] = {
       enabled: entry.enabled !== false,
-      model: typeof model === 'string' && model.length > 0 ? model : null
+      ...(typeof model === 'string' && model.length > 0 ? { model } : {})
     }
   }
   return out

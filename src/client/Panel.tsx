@@ -103,7 +103,10 @@ function ProviderCard(props: { row: ProviderStatus; state: KeepaliveUiState; sto
             style={styles.button}
             onClick={() =>
               void store.updateConfig({
-                providers: { ...state.status?.config.providers, [row.id]: { ...row, enabled: !row.enabled } }
+                providers: {
+                  ...state.status?.config.providers,
+                  [row.id]: { enabled: !row.enabled, ...(row.model === null ? {} : { model: row.model }) }
+                }
               })
             }
           >
