@@ -25,7 +25,10 @@ export function randomHex8(rand: () => number): string {
   return out
 }
 
+/** Instruction appended to every keepalive message (holds no spaces). */
+export const SHORT_REPLY_SUFFIX = '(请用不超过10个字回复)'
+
 /** The full keepalive payload sent to the provider. */
 export function buildKeepaliveMessage(phrase: string, now: Date, rand: () => number): string {
-  return phrase + ' ' + formatTimestamp(now) + ' ' + randomHex8(rand)
+  return phrase + ' ' + formatTimestamp(now) + ' ' + randomHex8(rand) + ' ' + SHORT_REPLY_SUFFIX
 }

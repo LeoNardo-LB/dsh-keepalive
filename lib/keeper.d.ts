@@ -18,6 +18,12 @@ export interface Keeper {
     shoot(provider: string, model: string): Promise<ShotResult>;
 }
 /**
+ * Token budget for one keepalive reply: ~10 Chinese characters need at most
+ * a few dozen tokens across tokenizers (1-2 tokens per CJK char). The prompt
+ * (SHORT_REPLY_SUFFIX) asks for ten characters; this is the hard cost cap.
+ */
+export declare const MAX_REPLY_TOKENS = 32;
+/**
  * Create a keeper over an injectable stream/clock/rand triple.
  * All three stay injectable so unit tests are fully deterministic.
  */

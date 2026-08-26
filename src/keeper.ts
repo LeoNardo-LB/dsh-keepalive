@@ -36,6 +36,13 @@ const PREVIEW_CHARS = 20
 const REPLY_CHARS = 4000
 
 /**
+ * Token budget for one keepalive reply: ~10 Chinese characters need at most
+ * a few dozen tokens across tokenizers (1-2 tokens per CJK char). The prompt
+ * (SHORT_REPLY_SUFFIX) asks for ten characters; this is the hard cost cap.
+ */
+export const MAX_REPLY_TOKENS = 32
+
+/**
  * Create a keeper over an injectable stream/clock/rand triple.
  * All three stay injectable so unit tests are fully deterministic.
  */
@@ -53,7 +60,7 @@ export function createKeeper(stream: LlmStream, rand: () => number, now: () => n
         const chunks = stream({
           provider,
           model,
-          maxTokens: 1,
+          maxTokens: MAX_REPLY_TOKENS,
           messages: [
             createUserMessage({
               content: [{ type: 'text', text: content }],

@@ -9,6 +9,7 @@
 - 配置界面整体迁入 DSH 原生设置窗口：新增 `settings.plugins.tab` 页签「提供商保活」；移除对话流 composer.dock 摘要条与 shell.overlay 面板。
 - 保活模型改为下拉选择（数据源 `GET /plugins/dsh-keepalive/models`），不再手填。
 - 历史记录可查看模型回复：keeper 捕获回复文本（头部 4000 字符）随 `HistoryEntry.reply` 持久化下发。
+- 保活消息追加「请用不超过10个字回复」指令，`maxTokens` 由 1 提至 32（约 10 个汉字的硬成本预算），模型可给出简短回复。
 
 ### 新增
 

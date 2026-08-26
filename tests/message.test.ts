@@ -41,11 +41,18 @@ describe('randomHex8', () => {
 })
 
 describe('buildKeepaliveMessage', () => {
-  it('joins phrase, timestamp and hex suffix with single spaces', () => {
+  it('joins phrase, timestamp, hex suffix and the short-reply instruction', () => {
     const msg = buildKeepaliveMessage('还在吗', LOCAL_DATE, () => 0)
     const ts = '2026-08-25T17:41:03' + localOffset(LOCAL_DATE)
     expect(msg.startsWith('还在吗 ' + ts + ' ')).toBe(true)
-    expect(msg).toMatch(HEX8_TAIL)
-    expect(msg.split(' ')).toHaveLength(3)
+    expect(msg).toMatch(new RegExp(' [0-9a-f]{8} '))
+    // phrase, timestamp, hex, instruction - the instruction holds no spaces.
+    expect(msg.split(' ')).toHaveLength(4)
+  })
+
+  it('asks the model to keep the reply within ten characters', () => {
+    const msg = buildKeepaliveMessage('还在吗', LOCAL_DATE, () => 0)
+    expect(msg).toContain('10个字')
+    expect(msg.endsWith('回复)')).toBe(true)
   })
 })

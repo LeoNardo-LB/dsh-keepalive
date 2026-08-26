@@ -90,7 +90,7 @@ await waitFor('webserver up', async () => (await fetch(WEB).catch(() => null)) !
   const contentOk = (() => {
     const last = request?.body?.messages?.[request.body.messages.length - 1]?.content
     const text = typeof last === 'string' ? last : Array.isArray(last) ? last[0]?.text : ''
-    return typeof text === 'string' && /20[0-9]{2}-/.test(text) && /[0-9a-f]{8}$/.test(text)
+    return typeof text === 'string' && /20[0-9]{2}-/.test(text) && /[0-9a-f]{8} /.test(text) && text.includes('10个字')
   })()
   record(
     's2-fire-now',
