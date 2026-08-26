@@ -10,6 +10,11 @@ export interface HistoryResponse {
   dailyStats: Record<string, DailyStat>
 }
 
+/** Per-provider model id lists (GET /models body). */
+export interface ModelsResponse {
+  models: Record<string, string[]>
+}
+
 export interface KeepaliveUiState {
   status: StatusSnapshot | null
   history: HistoryResponse | null
@@ -18,6 +23,8 @@ export interface KeepaliveUiState {
   error: string | null
   /** Panel visibility for the overlay seat. */
   panelOpen: boolean
+  /** Per-provider model lists; null until first fetched. */
+  models: Record<string, string[]> | null
 }
 
 export type StoreListener = (state: KeepaliveUiState) => void
@@ -28,7 +35,7 @@ export const POLL_INTERVAL_MS = 5_000
 export type FetchLike = (url: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }>
 
 export function createInitialUiState(): KeepaliveUiState {
-  return { status: null, history: null, skewMs: 0, error: null, panelOpen: false }
+  return { status: null, history: null, skewMs: 0, error: null, panelOpen: false, models: null }
 }
 
 /** Milliseconds until the provider's next shot, corrected by server skew. */
@@ -59,6 +66,7 @@ export interface KeepaliveStore {
   updateConfig(patch: Partial<KeepaliveConfig>): Promise<void>
   act(type: 'pause' | 'resume' | 'fire-now' | 'resume-provider' | 'remove-provider', provider?: string): Promise<void>
   loadHistory(limit: number): Promise<void>
+  loadModels(): Promise<void>
 }
 
 export function createStore(fetchLike: FetchLike, now: () => number, pollMs: number = POLL_INTERVAL_MS): KeepaliveStore {
@@ -140,6 +148,16 @@ export function createStore(fetchLike: FetchLike, now: () => number, pollMs: num
         if (!response.ok) throw new Error('history ' + String(response.status))
         const body = (await response.json()) as HistoryResponse
         set({ history: body, error: null })
+      } catch (error) {
+        set({ error: error instanceof Error ? error.message : String(error) })
+      }
+    },
+    async loadModels() {
+      try {
+        const response = await fetchLike('/plugins/dsh-keepalive/models')
+        if (!response.ok) throw new Error('models ' + String(response.status))
+        const body = (await response.json()) as ModelsResponse
+        set({ models: body.models, error: null })
       } catch (error) {
         set({ error: error instanceof Error ? error.message : String(error) })
       }
