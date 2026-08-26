@@ -18,7 +18,9 @@ export interface ShotResult {
   latencyMs: number
   /** Full outbound message content. */
   content: string
-  /** First characters of the model's text reply. */
+  /** The model's text reply (head-capped for storage). */
+  reply: string
+  /** First characters of the model's text reply (table cell). */
   preview: string
   /** Human-readable failure reason when status is fail. */
   error?: string
@@ -30,6 +32,8 @@ export interface Keeper {
 
 /** Response text kept per shot. */
 const PREVIEW_CHARS = 20
+/** Reply head kept per shot; longer streams are truncated here (one seat). */
+const REPLY_CHARS = 4000
 
 /**
  * Create a keeper over an injectable stream/clock/rand triple.
@@ -43,7 +47,7 @@ export function createKeeper(stream: LlmStream, rand: () => number, now: () => n
       const index = Number(deck.draw())
       const phrase = PHRASES[index] ?? PHRASES[0]!
       const content = buildKeepaliveMessage(phrase, new Date(now()), rand)
-      let preview = ''
+      let reply = ''
       let error: string | undefined
       try {
         const chunks = stream({
@@ -59,7 +63,7 @@ export function createKeeper(stream: LlmStream, rand: () => number, now: () => n
         })
         for await (const chunk of chunks) {
           if (chunk.type === 'text-delta') {
-            preview = (preview + chunk.text).slice(0, PREVIEW_CHARS)
+            reply = (reply + chunk.text).slice(0, REPLY_CHARS)
           } else if (chunk.type === 'finish') {
             const reason = chunk.reason
             if (reason.kind === 'error' || reason.kind === 'aborted') {
@@ -71,9 +75,10 @@ export function createKeeper(stream: LlmStream, rand: () => number, now: () => n
         error = thrown instanceof Error ? thrown.message : String(thrown)
       }
       const latencyMs = Math.max(0, now() - startedAt)
+      const preview = reply.slice(0, PREVIEW_CHARS)
       return error === undefined
-        ? { status: 'ok', latencyMs, content, preview }
-        : { status: 'fail', latencyMs, content, preview, error }
+        ? { status: 'ok', latencyMs, content, reply, preview }
+        : { status: 'fail', latencyMs, content, reply, preview, error }
     }
   }
 }

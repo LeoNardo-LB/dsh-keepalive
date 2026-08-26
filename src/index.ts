@@ -99,6 +99,7 @@ export function apply(ctx: Context, config: Partial<KeepaliveConfig> = {}): void
         status: result.status,
         latencyMs: result.latencyMs,
         content: result.content,
+        reply: result.reply,
         preview: result.preview,
         at,
         ...(result.error === undefined ? {} : { error: result.error })

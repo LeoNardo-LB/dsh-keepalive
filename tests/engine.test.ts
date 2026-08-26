@@ -72,8 +72,8 @@ function makeHarness(scripted: ShotResult[]) {
   return { timers, shots, onShots, persisted, config, getSaved: () => savedNextFire, setSaved: (value: Record<string, number> | null) => { savedNextFire = value }, deps, fireTimer, advance: (ms: number) => { nowMs += ms } }
 }
 
-const okShot: ShotResult = { status: 'ok', latencyMs: 120, content: 'c', preview: 'r' }
-const failShot: ShotResult = { status: 'fail', latencyMs: 90, content: 'c', preview: '', error: 'boom' }
+const okShot: ShotResult = { status: 'ok', latencyMs: 120, content: 'c', reply: 'r', preview: 'r' }
+const failShot: ShotResult = { status: 'fail', latencyMs: 90, content: 'c', reply: '', preview: '', error: 'boom' }
 
 describe('engine scheduling', () => {
   it('schedules every enabled provider with the jittered base interval', async () => {
