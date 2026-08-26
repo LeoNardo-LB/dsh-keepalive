@@ -14,8 +14,7 @@ const EXTERNALS = [
   'react',
   'react/jsx-runtime',
   '@deepseek-ai/cordis',
-  '@deepseek-ai/dsh-client-runtime/client',
-  '@deepseek-ai/dsh-client-ui-conversation/client'
+  '@deepseek-ai/dsh-client-runtime/client'
 ]
 
 // Assembled with String.raw so backslash escapes survive every write path.

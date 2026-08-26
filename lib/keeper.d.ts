@@ -7,7 +7,9 @@ export interface ShotResult {
     latencyMs: number;
     /** Full outbound message content. */
     content: string;
-    /** First characters of the model's text reply. */
+    /** The model's text reply (head-capped for storage). */
+    reply: string;
+    /** First characters of the model's text reply (table cell). */
     preview: string;
     /** Human-readable failure reason when status is fail. */
     error?: string;

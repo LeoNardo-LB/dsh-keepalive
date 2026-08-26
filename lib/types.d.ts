@@ -30,6 +30,8 @@ export interface HistoryEntry {
     latencyMs: number;
     /** Full outbound message content. */
     content: string;
+    /** The model's text reply (head-capped); absent in pre-reply records. */
+    reply?: string;
     /** First characters of the model's reply. */
     preview: string;
     /** Epoch ms. */

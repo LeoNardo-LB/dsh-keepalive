@@ -24,6 +24,8 @@ export interface RoutesDeps {
         id: string;
         name: string;
     }[];
+    /** Model ids offered by one provider route; rejects when unregistered. */
+    listModels: (provider: string) => Promise<string[]>;
     /** Newest-first history entries. */
     history: (limit: number, provider: string | undefined) => unknown[];
     /** Daily stat buckets keyed by day. */
@@ -34,12 +36,13 @@ export interface RoutesDeps {
     now: () => number;
 }
 type Handler = (req: IncomingMessage, res: ServerResponse) => Promise<void>;
-/** The four route handlers keyed by their URL suffix. */
+/** The five route handlers keyed by their URL suffix. */
 export interface RouteHandlers {
     status: Handler;
     history: Handler;
     config: Handler;
     action: Handler;
+    models: Handler;
 }
 /** Build the four route handlers; registration happens in index.ts. */
 export declare function createRoutes(deps: RoutesDeps): RouteHandlers;

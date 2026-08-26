@@ -21,8 +21,6 @@ export interface KeepaliveUiState {
   /** Local clock minus server clock at last poll; applied to countdowns. */
   skewMs: number
   error: string | null
-  /** Panel visibility for the overlay seat. */
-  panelOpen: boolean
   /** Per-provider model lists; null until first fetched. */
   models: Record<string, string[]> | null
 }
@@ -35,7 +33,7 @@ export const POLL_INTERVAL_MS = 5_000
 export type FetchLike = (url: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }>
 
 export function createInitialUiState(): KeepaliveUiState {
-  return { status: null, history: null, skewMs: 0, error: null, panelOpen: false, models: null }
+  return { status: null, history: null, skewMs: 0, error: null, models: null }
 }
 
 /** Milliseconds until the provider's next shot, corrected by server skew. */
@@ -62,7 +60,6 @@ export interface KeepaliveStore {
   start(): void
   stop(): void
   refresh(): Promise<void>
-  setPanelOpen(open: boolean): void
   updateConfig(patch: Partial<KeepaliveConfig>): Promise<void>
   act(type: 'pause' | 'resume' | 'fire-now' | 'resume-provider' | 'remove-provider', provider?: string): Promise<void>
   loadHistory(limit: number): Promise<void>
@@ -113,9 +110,6 @@ export function createStore(fetchLike: FetchLike, now: () => number, pollMs: num
       }
     },
     refresh: pollStatus,
-    setPanelOpen(open) {
-      set({ panelOpen: open })
-    },
     async updateConfig(patch) {
       try {
         const response = await fetchLike('/plugins/dsh-keepalive/config', {

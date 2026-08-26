@@ -24,6 +24,7 @@ export declare const keepaliveDomain: {
             content: string;
             preview: string;
             at: number;
+            reply?: string | undefined;
             error?: string | undefined;
         }>;
         stats: import("@deepseek-ai/dsh-storage-domain").DomainTableSpec<string, {

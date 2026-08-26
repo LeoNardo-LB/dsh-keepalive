@@ -8,14 +8,18 @@ export interface HistoryResponse {
     items: HistoryEntry[];
     dailyStats: Record<string, DailyStat>;
 }
+/** Per-provider model id lists (GET /models body). */
+export interface ModelsResponse {
+    models: Record<string, string[]>;
+}
 export interface KeepaliveUiState {
     status: StatusSnapshot | null;
     history: HistoryResponse | null;
     /** Local clock minus server clock at last poll; applied to countdowns. */
     skewMs: number;
     error: string | null;
-    /** Panel visibility for the overlay seat. */
-    panelOpen: boolean;
+    /** Per-provider model lists; null until first fetched. */
+    models: Record<string, string[]> | null;
 }
 export type StoreListener = (state: KeepaliveUiState) => void;
 export declare const POLL_INTERVAL_MS = 5000;
@@ -40,10 +44,10 @@ export interface KeepaliveStore {
     start(): void;
     stop(): void;
     refresh(): Promise<void>;
-    setPanelOpen(open: boolean): void;
     updateConfig(patch: Partial<KeepaliveConfig>): Promise<void>;
     act(type: 'pause' | 'resume' | 'fire-now' | 'resume-provider' | 'remove-provider', provider?: string): Promise<void>;
     loadHistory(limit: number): Promise<void>;
+    loadModels(): Promise<void>;
 }
 export declare function createStore(fetchLike: FetchLike, now: () => number, pollMs?: number): KeepaliveStore;
 //# sourceMappingURL=store.d.ts.map
