@@ -57,6 +57,8 @@ function makeDeps() {
       { id: 'alpha', name: 'Alpha' },
       { id: 'beta', name: 'Beta' }
     ],
+    listModels: async (provider: string) =>
+      provider === 'alpha' ? ['m1', 'm2'] : provider === 'beta' ? [] : Promise.reject(new Error('nope')),
     history: () => [],
     dailyStats: () => ({}),
     logger: { warn: () => undefined },
@@ -119,6 +121,57 @@ describe('routes action', () => {
     const { routes } = makeDeps()
     const box = fakeRes()
     await routes.action(fakeReq({ type: 'nope' }), box.res)
+    expect(box.statusCode).toBe(400)
+  })
+})
+
+describe('routes models', () => {
+  it('returns every available provider with its model id list', async () => {
+    const { routes } = makeDeps()
+    const box = fakeRes()
+    await routes.models(fakeReq(), box.res)
+    expect(box.statusCode).toBe(200)
+    const body = box.payload as { models: Record<string, string[]> }
+    expect(body.models).toEqual({ alpha: ['m1', 'm2'], beta: [] })
+  })
+
+  it('maps a provider whose listing rejects to an empty list instead of failing the route', async () => {
+    const { routes } = makeDeps()
+    const box = fakeRes()
+    // status snapshot keeps alpha/beta only, so no rejecting provider here;
+    // simulate one by stubbing listAvailableProviders through a second build.
+    const engine = { snapshot: () => [], isPaused: () => false, reschedule: async () => undefined } as unknown as Engine
+    const config: KeepaliveConfig = {
+      enabled: true,
+      intervalMinutes: 30,
+      jitterPercent: 20,
+      autoPause: { enabled: true, threshold: 5 },
+      providers: {}
+    }
+    const failing = createRoutes({
+      engine,
+      config: () => config,
+      updateConfig: async () => undefined,
+      removeProvider: async () => undefined,
+      listAvailableProviders: () => [{ id: 'ghost', name: 'Ghost' }],
+      listModels: async () => {
+        throw new Error('unregistered')
+      },
+      history: () => [],
+      dailyStats: () => ({}),
+      logger: { warn: () => undefined },
+      now: () => 0
+    })
+    await failing.models(fakeReq(), box.res)
+    expect(box.statusCode).toBe(200)
+    const body = box.payload as { models: Record<string, string[]> }
+    expect(body.models).toEqual({ ghost: [] })
+  })
+
+  it('is not part of the action handler surface', async () => {
+    const { routes } = makeDeps()
+    const box = fakeRes()
+    await routes.action(fakeReq({ type: 'list-models' }), box.res)
     expect(box.statusCode).toBe(400)
   })
 })

@@ -24,6 +24,8 @@ export interface RoutesDeps {
   removeProvider: (id: string) => Promise<void>
   /** All provider routes currently registered in the llm service. */
   listAvailableProviders: () => { id: string; name: string }[]
+  /** Model ids offered by one provider route; rejects when unregistered. */
+  listModels: (provider: string) => Promise<string[]>
   /** Newest-first history entries. */
   history: (limit: number, provider: string | undefined) => unknown[]
   /** Daily stat buckets keyed by day. */
@@ -34,12 +36,13 @@ export interface RoutesDeps {
 
 type Handler = (req: IncomingMessage, res: ServerResponse) => Promise<void>
 
-/** The four route handlers keyed by their URL suffix. */
+/** The five route handlers keyed by their URL suffix. */
 export interface RouteHandlers {
   status: Handler
   history: Handler
   config: Handler
   action: Handler
+  models: Handler
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
@@ -211,10 +214,27 @@ export function createRoutes(deps: RoutesDeps): RouteHandlers {
     }
   }
 
+  /** Per-provider model id lists for dropdown selection (never free text). */
+  async function models(_req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const modelMap: Record<string, string[]> = {}
+    for (const provider of deps.listAvailableProviders()) {
+      try {
+        const ids = await deps.listModels(provider.id)
+        modelMap[provider.id] = Array.isArray(ids) ? ids : []
+      } catch (error) {
+        // One broken route must not fail the whole listing for the others.
+        deps.logger.warn('dsh-keepalive: listModels failed for "' + provider.id + '": ' + String(error))
+        modelMap[provider.id] = []
+      }
+    }
+    sendJson(res, 200, { models: modelMap })
+  }
+
   return {
     status,
     history,
     config,
-    action
+    action,
+    models
   }
 }

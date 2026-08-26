@@ -164,6 +164,7 @@ export function apply(ctx: Context, config: Partial<KeepaliveConfig> = {}): void
       removeProvider: (id) =>
         ctx.settings.mutate(NAMESPACE, [{ op: 'unset', path: ['providers', id] }]),
       listAvailableProviders: () => ctx.llm.listProviders().map((route) => ({ id: route.id, name: route.name })),
+      listModels: async (id) => (await ctx.llm.listModels(id)).map((model) => model.id),
       history: (limit, provider) => {
         let items = [...historyTable.entries()]
           .map(([, entry]) => entry)
@@ -200,6 +201,11 @@ export function apply(ctx: Context, config: Partial<KeepaliveConfig> = {}): void
       () =>
         ctx.webServer.register({ kind: 'exact', path: ROUTE_PREFIX + '/action', handler: routes.action }),
       'dsh-keepalive: action route'
+    )
+    ctx.effect(
+      () =>
+        ctx.webServer.register({ kind: 'exact', path: ROUTE_PREFIX + '/models', handler: routes.models }),
+      'dsh-keepalive: models route'
     )
 
     const disposeWatch = scope.watch(() => {
