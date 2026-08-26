@@ -7,14 +7,17 @@
  */
 import type { Context } from '@deepseek-ai/cordis';
 import { Config } from './config.ts';
+import type { KeepaliveConfig } from './types.ts';
 export declare const name = "dsh-keepalive";
 /** Host services required before activation (fail-loud when missing). */
 export declare const inject: string[];
 export { Config };
 /**
- * Install dsh-keepalive. Async init runs as a guarded background task so the
- * plugin activates synchronously; failures log loudly instead of throwing
- * into the fiber (the panel surfaces the empty state).
+ * Install dsh-keepalive. The composition-layer entry config flows in as the
+ * settings namespace base layer (below user settings): dev overlays seed
+ * defaults, the user document stays the live-adjustable truth. Async init
+ * runs as a guarded background task so the plugin activates synchronously;
+ * failures log loudly instead of throwing into the fiber.
  */
-export declare function apply(ctx: Context): void;
+export declare function apply(ctx: Context, config?: Partial<KeepaliveConfig>): void;
 //# sourceMappingURL=index.d.ts.map

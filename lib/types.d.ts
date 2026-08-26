@@ -58,11 +58,18 @@ export interface ProviderStatus {
         latencyMs: number;
     } | null;
 }
+/** One provider route currently registered in the llm service. */
+export interface AvailableProvider {
+    id: string;
+    name: string;
+}
 /** GET /status response body. */
 export interface StatusSnapshot {
     enabled: boolean;
     config: KeepaliveConfig;
     providers: ProviderStatus[];
+    /** All provider routes registered at poll time (superset of config keys). */
+    availableProviders: AvailableProvider[];
     /** Whether scheduling is manually paused (engine-level pause). */
     paused: boolean;
     /** Server clock for client-side countdown calibration. */

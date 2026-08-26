@@ -4,7 +4,7 @@
  * form (master switch, interval, jitter, auto-pause, per-provider toggle).
  */
 import { useEffect, useState } from 'react'
-import type { KeepaliveConfig, ProviderStatus } from '../types.ts'
+import type { KeepaliveConfig, ProviderConfig, ProviderStatus } from '../types.ts'
 import type { KeepaliveUiState, KeepaliveStore } from './store.ts'
 import { countdownMs, formatCountdown } from './store.ts'
 
@@ -69,50 +69,108 @@ const styles: Record<string, React.CSSProperties> = {
   badge: { fontSize: '11px', borderRadius: '10px', padding: '1px 8px' }
 }
 
-function statusBadge(row: ProviderStatus): React.ReactNode {
-  if (row.parked) {
+function providerBadge(registered: boolean, entry: ProviderConfig | undefined, row: ProviderStatus | undefined): React.ReactNode {
+  if (!registered) {
+    return <span style={{ ...styles.badge, background: 'rgba(92,99,112,0.3)', color: '#888' }}>未注册</span>
+  }
+  if (entry === undefined) {
+    return <span style={{ ...styles.badge, background: 'rgba(92,99,112,0.2)', color: '#999', border: '1px dashed #666' }}>未参与</span>
+  }
+  if (row?.parked === true) {
     return <span style={{ ...styles.badge, background: 'rgba(224,108,117,0.2)', color: '#e06c75' }}>已停放</span>
   }
-  if (!row.enabled) {
+  if (entry.enabled !== true) {
     return <span style={{ ...styles.badge, background: 'rgba(92,99,112,0.3)', color: '#888' }}>已禁用</span>
   }
   return <span style={{ ...styles.badge, background: 'rgba(152,195,121,0.2)', color: '#98c379' }}>活跃</span>
 }
 
-function ProviderCard(props: { row: ProviderStatus; state: KeepaliveUiState; store: KeepaliveStore; now: number }): React.ReactNode {
-  const { row, state, store, now } = props
+/**
+ * One card per provider route. The panel ALWAYS shows every registered route
+ * (availableProviders superset); the config entry is only this provider's
+ * override - absent means "not participating yet", one click opts in.
+ */
+function ProviderCard(props: { id: string; name: string; registered: boolean; entry: ProviderConfig | undefined; row: ProviderStatus | undefined; state: KeepaliveUiState; store: KeepaliveStore; now: number }): React.ReactNode {
+  const { id, name, registered, entry, row, state, store, now } = props
+  // Model box seeds from the CONFIG value (not the resolved one, so "default
+  // model" is not silently pinned to an explicit id) and follows external
+  // config changes; empty string = use the provider default.
+  const configuredModel = entry?.model ?? ''
+  const [modelText, setModelText] = useState(String(configuredModel))
+  useEffect(() => { setModelText(String(configuredModel)) }, [configuredModel])
   return (
     <div style={styles.card}>
       <div style={styles.row}>
-        <strong>{row.id}</strong>
-        {statusBadge(row)}
-        <span style={{ opacity: 0.7 }}>{row.model ?? '模型未解析'}</span>
+        <strong>{name}</strong>
+        <span style={{ opacity: 0.55, fontSize: '11px' }}>{id}</span>
+        {providerBadge(registered, entry, row)}
+        <span style={{ opacity: 0.7 }}>{row?.model ?? (entry?.model ?? '默认模型')}</span>
         <span style={{ marginLeft: 'auto', fontVariantNumeric: 'tabular-nums' }}>
-          {formatCountdown(countdownMs(row.nextFireAt, state, now))}
+          {entry !== undefined && entry.enabled === true && row !== undefined
+            ? formatCountdown(countdownMs(row.nextFireAt, state, now))
+            : '—'}
         </span>
       </div>
-      <div style={{ ...styles.row, opacity: 0.85 }}>
-        {row.lastResult === null
-          ? '尚无发送记录'
-          : '最近: ' + (row.lastResult.status === 'ok' ? '✓ ' : '✗ ') + String(row.lastResult.latencyMs) + 'ms'}
-        {row.consecutiveFailures > 0 && <span>连续失败 {String(row.consecutiveFailures)}</span>}
-        <span style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
-          <button style={styles.button} onClick={() => void store.act('fire-now', row.id)}>立即发送</button>
-          {row.parked && <button style={styles.button} onClick={() => void store.act('resume-provider', row.id)}>恢复</button>}
-          <button
-            style={styles.button}
-            onClick={() =>
-              void store.updateConfig({
-                providers: {
-                  ...state.status?.config.providers,
-                  [row.id]: { enabled: !row.enabled, ...(row.model === null ? {} : { model: row.model }) }
+      {entry !== undefined && row !== undefined && (
+        <div style={{ ...styles.row, opacity: 0.85 }}>
+          {row.lastResult === null
+            ? '尚无发送记录'
+            : '最近: ' + (row.lastResult.status === 'ok' ? '✓ ' : '✗ ') + String(row.lastResult.latencyMs) + 'ms'}
+          {(row.consecutiveFailures ?? 0) > 0 && <span>连续失败 {String(row.consecutiveFailures)}</span>}
+        </div>
+      )}
+      <div style={styles.row}>
+        {entry === undefined ? (
+          <span style={{ marginLeft: 'auto' }}>
+            <button
+              style={{ ...styles.button, color: '#98c379', borderColor: '#98c379' }}
+              disabled={!registered}
+              title={registered ? '把该提供商加入保活调度' : '该路由当前未注册，无法参与'}
+              onClick={() => void store.updateConfig({ providers: { [id]: { enabled: true } } })}
+            >
+              ＋ 参与保活
+            </button>
+          </span>
+        ) : (
+          <>
+            <label>保活模型
+              <input
+                style={{ ...styles.input, width: '150px' }}
+                placeholder="默认模型"
+                value={modelText}
+                onChange={(e) => setModelText(e.target.value)}
+              />
+            </label>
+            <button
+              style={styles.button}
+              title="空 = 使用该提供商默认模型"
+              onClick={() => void store.updateConfig({ providers: { [id]: { enabled: entry.enabled, model: modelText } } })}
+            >
+              保存模型
+            </button>
+            <span style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
+              {row !== undefined && entry.enabled === true && (
+                <button style={styles.button} onClick={() => void store.act('fire-now', id)}>立即发送</button>
+              )}
+              {row?.parked === true && <button style={styles.button} onClick={() => void store.act('resume-provider', id)}>恢复</button>}
+              <button
+                style={styles.button}
+                onClick={() =>
+                  void store.updateConfig({ providers: { [id]: { enabled: entry.enabled !== true, ...(configuredModel === '' ? {} : { model: configuredModel }) } } })
                 }
-              })
-            }
-          >
-            {row.enabled ? '禁用' : '启用'}
-          </button>
-        </span>
+              >
+                {entry.enabled === true ? '禁用' : '启用'}
+              </button>
+              <button
+                style={{ ...styles.button, color: '#e06c75', borderColor: '#e06c75' }}
+                title="清除该提供商的保活配置（面板中仍会显示）"
+                onClick={() => void store.act('remove-provider', id)}
+              >
+                移除配置
+              </button>
+            </span>
+          </>
+        )}
       </div>
     </div>
   )
@@ -201,7 +259,29 @@ export function Panel(props: PanelProps): React.ReactNode {
                 <div style={styles.sectionTitle}>配置</div>
                 <ConfigForm config={status.config} store={store} />
                 <div style={styles.sectionTitle}>提供商</div>
-                {status.providers.map((row) => <ProviderCard key={row.id} row={row} state={state} store={store} now={now} />)}
+                {((): React.ReactNode => {
+                  // Every registered route, plus config-only leftovers (stale
+                  // routes) marked unregistered - the panel is the FULL list.
+                  const seen = new Map<string, { id: string; name: string }>()
+                  for (const available of status.availableProviders) seen.set(available.id, available)
+                  for (const id of Object.keys(status.config.providers)) {
+                    if (!seen.has(id)) seen.set(id, { id, name: id })
+                  }
+                  const all = [...seen.values()].sort((a, b) => a.id.localeCompare(b.id))
+                  return all.map((provider) => (
+                    <ProviderCard
+                      key={provider.id}
+                      id={provider.id}
+                      name={provider.name}
+                      registered={status.availableProviders.some((available) => available.id === provider.id)}
+                      entry={status.config.providers[provider.id]}
+                      row={status.providers.find((row) => row.id === provider.id)}
+                      state={state}
+                      store={store}
+                      now={now}
+                    />
+                  ))
+                })()}
               </div>
             )}
             {tab === 'history' && (

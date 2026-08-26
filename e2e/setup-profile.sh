@@ -61,6 +61,15 @@ cat > /e2e/e2e-overlay.yml << OVERLAY_EOF
             name: Mock Backup
             contextWindow: 1000000
             maxTokens: 8192
+      mock-spare:
+        apiKeyEnv: MOCK_SPARE_KEY
+        api: openai-completions
+        baseURL: http://127.0.0.1:9203/v1
+        models:
+          - id: mock-keepalive-model
+            name: Mock Spare
+            contextWindow: 1000000
+            maxTokens: 8192
 OVERLAY_EOF
 
 dsh web --patch /e2e/e2e-overlay.yml --dump-config >/e2e/evidence/dump-config.yml 2>&1

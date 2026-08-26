@@ -171,4 +171,33 @@ await waitFor('webserver up', async () => (await fetch(WEB).catch(() => null)) !
   record('s7-silent', sessionCount === 0 && historyHasShots, 'sessions=' + String(sessionCount) + ' historyShots=' + String(historyHasShots))
 }
 
+// S8: full provider visibility + per-provider opt-in (the panel contract:
+// every registered route is listed even when not participating; one config
+// POST opts it in and the engine schedules it).
+{
+  const before = await status()
+  const available = before.availableProviders.map((p) => p.id).sort()
+  const spareVisible = available.includes('mock-spare')
+  const spareConfigured = before.config.providers['mock-spare'] !== undefined
+  const response = await fetch(WEB + '/plugins/dsh-keepalive/config', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ providers: { 'mock-spare': { enabled: true } } })
+  })
+  const optInOk = response.ok
+  const row = await waitFor('spare scheduled', async () => {
+    const body = await status()
+    const entry = body.providers.find((p) => p.id === 'mock-spare')
+    return entry !== undefined && entry.nextFireAt !== null ? entry : undefined
+  })
+  const fired = await act('fire-now', 'mock-spare')
+  const spareLog = await fetch('http://127.0.0.1:9203/__log').then((r) => r.json())
+  const hit = spareLog.length === 1
+  record(
+    's8-provider-opt-in',
+    spareVisible && !spareConfigured && optInOk && row.nextFireAt !== null && fired.ok && hit,
+    'visible=' + String(spareVisible) + ' preConfigured=' + String(spareConfigured) + ' optIn=' + String(optInOk) + ' scheduled=' + String(row.nextFireAt !== null) + ' firedHttp=' + String(hit)
+  )
+}
+
 console.log(results.every((r) => r.pass) ? 'ALL SCENARIOS PASS' : 'SOME SCENARIOS FAILED')

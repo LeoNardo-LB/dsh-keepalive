@@ -39,7 +39,8 @@ dsh plugin --profile web add github:<你的账号>/dsh-keepalive
 
 1. 启动 `dsh web`，打开 Web GUI。
 2. composer 上方出现 keepalive 摘要条，点击打开面板。
-3. 首次运行总开关为**关**，提供商列表已预填当前全部已注册路由——确认/勾选后打开总开关即开始保活。
+3. 面板**恒展示全部已注册的提供商路由**（新加的路由 ≤5s 自动出现）：每家可独立「参与保活 / 禁用 / 指定保活模型 / 移除配置」。
+4. 首次运行总开关为**关**——确认参与名单后打开总开关即开始保活。
 
 ## 配置（`$DSH_HOME/settings.yaml` 的 `dsh-keepalive` 节，热生效）
 

@@ -158,6 +158,11 @@ export function apply(ctx: Context, config: Partial<KeepaliveConfig> = {}): void
       engine,
       config: () => scope.get(),
       updateConfig: (patch) => scope.update(patch),
+      // Recursive-merge settings cannot delete keys via update; removal is a
+      // path-addressed unset on the user layer through the provider's mutate.
+      removeProvider: (id) =>
+        ctx.settings.mutate(NAMESPACE, [{ op: 'unset', path: ['providers', id] }]),
+      listAvailableProviders: () => ctx.llm.listProviders().map((route) => ({ id: route.id, name: route.name })),
       history: (limit, provider) => {
         let items = [...historyTable.entries()]
           .map(([, entry]) => entry)

@@ -27,6 +27,9 @@
 - 20:36 容器第 4 轮（bash-6，最终代码）：**7/7 ALL SCENARIOS PASS**——s1 路由与双提供商、s2 fire-now 全链路（http+history ok+消息形状）、s3 调度精度 scheduledShotDeltaMs=8ms、s4 暂停/恢复、s5 停放+停放后拒绝+恢复、s6 重排、s7 静默 sessions=0。证据：e2e/evidence/driver-evidence.json。
 - 20:41 重启补发专项（bash-8，挂载脚本进同镜像）：杀 dsh→睡过 deadline→重启→**恰好 1 发补发**（before=0 after=1）。RESTART TEST PASS。证据：e2e/evidence/restart-web-{1,2}.log。
 
+- 01:15 用户反馈"提供商为何不能编辑"→ 定位两个缺口：面板无添加/编辑入口；且实测 settings.update 递归深合并（源码 mergeLayers），providers patch 无法删除 key。本机 settings.yaml 亦见预填只抓到 deepseek-official（启动时 pi-ai 路由未注册完 + 之后不刷新）。
+- 01:30 面板模型按用户期望重做：恒展示全部已注册路由（availableProviders 随轮询刷新，新路由自动出现），每家独立配置（参与/禁用/模型/移除配置）；移除走 settings.mutate unset。routes 单测 +7（status 形状/增量语义/clamp/400/remove）；e2e 加第三家 mock-spare 与 s8 场景（可见→参与→调度→fire-now 命中）。typecheck 0 / 43 tests / client bundle 27824B。
+
 ## 完结迁移区
 
 （验收通过后迁入）

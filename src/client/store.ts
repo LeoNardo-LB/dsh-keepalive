@@ -57,7 +57,7 @@ export interface KeepaliveStore {
   refresh(): Promise<void>
   setPanelOpen(open: boolean): void
   updateConfig(patch: Partial<KeepaliveConfig>): Promise<void>
-  act(type: 'pause' | 'resume' | 'fire-now' | 'resume-provider', provider?: string): Promise<void>
+  act(type: 'pause' | 'resume' | 'fire-now' | 'resume-provider' | 'remove-provider', provider?: string): Promise<void>
   loadHistory(limit: number): Promise<void>
 }
 

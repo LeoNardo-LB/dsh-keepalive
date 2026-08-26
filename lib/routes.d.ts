@@ -11,8 +11,19 @@ export declare const ROUTE_PREFIX = "/plugins/dsh-keepalive";
 export interface RoutesDeps {
     engine: Engine;
     config: () => KeepaliveConfig;
-    /** Update the settings user layer (partial patch). */
+    /**
+     * Update the settings user layer. NOTE: the settings service merges plain
+     * objects RECURSIVELY, so a providers patch ADDS/UPDATES keys only — it can
+     * never delete one. Removal must go through removeProvider (mutate/unset).
+     */
     updateConfig: (patch: object) => Promise<void>;
+    /** Remove one provider key from the user layer (path-op unset). */
+    removeProvider: (id: string) => Promise<void>;
+    /** All provider routes currently registered in the llm service. */
+    listAvailableProviders: () => {
+        id: string;
+        name: string;
+    }[];
     /** Newest-first history entries. */
     history: (limit: number, provider: string | undefined) => unknown[];
     /** Daily stat buckets keyed by day. */
