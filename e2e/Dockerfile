@@ -5,6 +5,11 @@ FROM node:26
 # Same line as the production install + pnpm for profile plugin adds.
 RUN npm install -g --no-audit --no-fund pnpm@11 @deepseek-ai/dsh@0.1.1-rc.2
 
+# Headless chromium + CJK fonts for the browser-half verification.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends chromium fonts-noto-cjk \
+  && rm -rf /var/lib/apt/lists/*
+
 # The plugin package: install dev deps and build both halves.
 WORKDIR /plugin
 COPY . .

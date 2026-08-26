@@ -58,5 +58,11 @@ export function apply(ctx: ClientContext): void {
 function SettingsTabBridge(props: { store: KeepaliveStore }): React.ReactNode {
   const [state, setState] = React.useState(props.store.getSnapshot())
   React.useEffect(() => props.store.subscribe(setState), [props.store])
-  return <SettingsTab state={state} store={props.store} now={Date.now()} />
+  // Per-second clock tick so countdowns decrease between 5s store polls.
+  const [now, setNow] = React.useState(() => Date.now())
+  React.useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+  return <SettingsTab state={state} store={props.store} now={now} />
 }

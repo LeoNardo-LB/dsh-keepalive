@@ -2,6 +2,18 @@
 
 本文件记录 dsh-keepalive 的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循语义化版本。
 
+## [Unreleased]
+
+### 变更
+
+- 配置界面整体迁入 DSH 原生设置窗口：新增 `settings.plugins.tab` 页签「提供商保活」；移除对话流 composer.dock 摘要条与 shell.overlay 面板。
+- 保活模型改为下拉选择（数据源 `GET /plugins/dsh-keepalive/models`），不再手填。
+- 历史记录可查看模型回复：keeper 捕获回复文本（头部 4000 字符）随 `HistoryEntry.reply` 持久化下发。
+
+### 新增
+
+- HTTP 面：`GET /plugins/dsh-keepalive/models`（逐提供商模型列表；单路由枚举失败不拖垮整体）。
+
 ## [0.1.0-dev.1] - 2026-08-25
 
 ### 新增
