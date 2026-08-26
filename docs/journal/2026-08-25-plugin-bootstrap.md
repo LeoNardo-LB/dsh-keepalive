@@ -29,6 +29,7 @@
 
 - 01:15 用户反馈"提供商为何不能编辑"→ 定位两个缺口：面板无添加/编辑入口；且实测 settings.update 递归深合并（源码 mergeLayers），providers patch 无法删除 key。本机 settings.yaml 亦见预填只抓到 deepseek-official（启动时 pi-ai 路由未注册完 + 之后不刷新）。
 - 01:30 面板模型按用户期望重做：恒展示全部已注册路由（availableProviders 随轮询刷新，新路由自动出现），每家独立配置（参与/禁用/模型/移除配置）；移除走 settings.mutate unset。routes 单测 +7（status 形状/增量语义/clamp/400/remove）；e2e 加第三家 mock-spare 与 s8 场景（可见→参与→调度→fire-now 命中）。typecheck 0 / 43 tests / client bundle 27824B。
+- 02:05 浏览器级实机验证（用户指令"去docker容器中验证"）：常驻容器 ka-live 内装 Chromium+puppeteer-core，无头驱动真实 GUI。迭代要点：合成 el.click() 被引导弹窗吞掉→改 puppeteer 受信点击；发现 composer.dock 座位为 session 域、需预种工作区（workspace.json 的 createdAt/updatedAt 为 ISO 字符串，数字会 fail-loud）；面板点击须选最小文本候选（外层容器共享子串会点偏）。终局 **ALL PASS**：boot 图/bundle 服务(27824B id 标记)/摘要条挂载/**倒计时实测跳动(00:00 触发后重排 00:49)**/面板打开/全量提供商列表(spare 可见)/UI 一键参与(卡片串含 活跃|mock-keepalive-model|00:58 及全套按钮)/零运行时错误。证据：e2e/evidence/browser-{1..7}*.png + browser-evidence.json。commit 2d0f492 后续。
 
 ## 完结迁移区
 
