@@ -4,9 +4,23 @@
  * Presentation only - every reactive fact arrives via props from Bridge.
  */
 import { useEffect, useState } from 'react'
+import type { FlashMessage, KeepaliveUiState, KeepaliveStore } from './store.ts'
 import type { KeepaliveConfig, HistoryEntry, ProviderConfig, ProviderStatus } from '../types.ts'
-import type { KeepaliveUiState, KeepaliveStore } from './store.ts'
 import { countdownMs, formatCountdown } from './store.ts'
+
+/**
+ * DSH shared transient banner (ui-primitives Toast), resolved from the
+ * serving module table at runtime; when absent the inline fallback banner
+ * below takes over with the same lifecycle.
+ */
+interface DshToastProps { text: string; onDone: () => void }
+let DshToast: ((props: DshToastProps) => React.ReactNode) | null = null
+try {
+  const mod = require('@deepseek-ai/dsh-client-ui-primitives') as { Toast?: (props: DshToastProps) => React.ReactNode }
+  DshToast = mod.Toast ?? null
+} catch {
+  // primitive not served; the fallback banner renders instead
+}
 
 export interface SettingsTabProps {
   state: KeepaliveUiState
@@ -94,6 +108,50 @@ function badgeFor(registered: boolean, entry: ProviderConfig | undefined, row: P
   return <span style={{ ...styles.badge, background: 'rgba(152,195,121,0.2)', color: '#98c379' }}>活跃</span>
 }
 
+/** The settled-action banner: DSH Toast when served, inline banner otherwise. */
+function FlashView(props: { flash: FlashMessage | null; store: KeepaliveStore }): React.ReactNode {
+  const { flash, store } = props
+  const [fallbackVisible, setFallbackVisible] = useState(false)
+  const seq = flash?.seq ?? null
+  useEffect(() => {
+    if (seq === null || DshToast !== null) return
+    setFallbackVisible(true)
+    const timer = setTimeout(() => {
+      setFallbackVisible(false)
+      store.clearFlash(seq)
+    }, 4000)
+    return () => clearTimeout(timer)
+  }, [seq])
+  if (flash === null) return null
+  const text = (flash.kind === 'ok' ? '✓ ' : '✗ ') + flash.text
+  if (DshToast !== null) {
+    return <DshToast key={flash.seq} text={text} onDone={() => store.clearFlash(flash.seq)} />
+  }
+  if (!fallbackVisible) return null
+  return (
+    <div
+      key={flash.seq}
+      role="alert"
+      style={{
+        position: 'fixed',
+        top: '14px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 1200,
+        background: 'var(--dsh-bg, #1e1e1e)',
+        color: flash.kind === 'ok' ? '#98c379' : '#e06c75',
+        border: '1px solid var(--dsh-border, #444)',
+        borderRadius: '8px',
+        padding: '8px 14px',
+        fontSize: '13px',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.4)'
+      }}
+    >
+      {text}
+    </div>
+  )
+}
+
 /** One provider card. Model choice is a dropdown over the live route list. */
 function ProviderCard(props: {
   id: string
@@ -136,11 +194,11 @@ function ProviderCard(props: {
         {entry === undefined ? (
           <button
             style={{ ...styles.button, color: '#98c379', borderColor: '#98c379' }}
-            disabled={!registered}
+            disabled={!registered || state.pending['optin:' + id] === true}
             title={registered ? '把该提供商加入保活调度' : '该路由当前未注册，无法参与'}
-            onClick={() => void store.updateConfig({ providers: { [id]: { enabled: true } } })}
+            onClick={() => void store.updateConfig({ providers: { [id]: { enabled: true } } }, { key: 'optin:' + id, ok: '已加入保活调度' })}
           >
-            ＋ 参与保活
+            {state.pending['optin:' + id] === true ? '加入中…' : '＋ 参与保活'}
           </button>
         ) : (
           <>
@@ -162,31 +220,50 @@ function ProviderCard(props: {
             {registered && modelOptions.length === 0 && <span style={{ opacity: 0.55, fontSize: '11px' }}>暂无可用模型</span>}
             <button
               style={{ ...styles.button }}
-              disabled={saving || !registered}
+              disabled={saving || !registered || state.pending['model:' + id] === true}
               title="选定下拉项后保存"
-              onClick={() => void store.updateConfig({ providers: { [id]: { enabled: entry.enabled, ...(modelChoice === '' ? {} : { model: modelChoice }) } } })}
+              onClick={() => void store.updateConfig({ providers: { [id]: { enabled: entry.enabled, ...(modelChoice === '' ? {} : { model: modelChoice }) } } }, { key: 'model:' + id, ok: '已保存保活模型' })}
             >
-              保存模型
+              {state.pending['model:' + id] === true ? '保存中…' : '保存模型'}
             </button>
             <span style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
               {row !== undefined && entry.enabled === true && (
-                <button style={styles.button} onClick={() => void store.act('fire-now', id)}>立即发送</button>
+                <button
+                  style={styles.button}
+                  disabled={state.pending['fire:' + id] === true}
+                  onClick={() => void store.act('fire-now', id, { key: 'fire:' + id, ok: '已触发立即发送' })}
+                >
+                  {state.pending['fire:' + id] === true ? '发送中…' : '立即发送'}
+                </button>
               )}
-              {row?.parked === true && <button style={styles.button} onClick={() => void store.act('resume-provider', id)}>恢复</button>}
+              {row?.parked === true && (
+                <button
+                  style={styles.button}
+                  disabled={state.pending['resume:' + id] === true}
+                  onClick={() => void store.act('resume-provider', id, { key: 'resume:' + id, ok: '已恢复该提供商' })}
+                >
+                  {state.pending['resume:' + id] === true ? '处理中…' : '恢复'}
+                </button>
+              )}
               <button
                 style={styles.button}
+                disabled={state.pending['toggle:' + id] === true}
                 onClick={() =>
-                  void store.updateConfig({ providers: { [id]: { enabled: entry.enabled !== true, ...(configuredModel === '' ? {} : { model: configuredModel }) } } })
+                  void store.updateConfig(
+                    { providers: { [id]: { enabled: entry.enabled !== true, ...(configuredModel === '' ? {} : { model: configuredModel }) } } },
+                    { key: 'toggle:' + id, ok: entry.enabled === true ? '已禁用该提供商' : '已启用该提供商' }
+                  )
                 }
               >
-                {entry.enabled === true ? '禁用' : '启用'}
+                {state.pending['toggle:' + id] === true ? '切换中…' : entry.enabled === true ? '禁用' : '启用'}
               </button>
               <button
                 style={{ ...styles.button, color: '#e06c75', borderColor: '#e06c75' }}
+                disabled={state.pending['remove:' + id] === true}
                 title="清除该提供商的保活配置（列表中仍会显示）"
-                onClick={() => void store.act('remove-provider', id)}
+                onClick={() => void store.act('remove-provider', id, { key: 'remove:' + id, ok: '已移除该提供商配置' })}
               >
-                移除配置
+                {state.pending['remove:' + id] === true ? '移除中…' : '移除配置'}
               </button>
             </span>
           </>
@@ -196,7 +273,7 @@ function ProviderCard(props: {
   )
 }
 
-function ConfigForm(props: { config: KeepaliveConfig; store: KeepaliveStore }): React.ReactNode {
+function ConfigForm(props: { config: KeepaliveConfig; store: KeepaliveStore; pending: Record<string, true> }): React.ReactNode {
   const { config, store } = props
   const [interval, setIntervalValue] = useState(String(config.intervalMinutes))
   const [jitter, setJitter] = useState(String(config.jitterPercent))
@@ -221,15 +298,19 @@ function ConfigForm(props: { config: KeepaliveConfig; store: KeepaliveStore }): 
       </label>
       <button
         style={styles.button}
+        disabled={props.pending['config'] === true}
         onClick={() =>
-          void store.updateConfig({
-            intervalMinutes: Number(interval),
-            jitterPercent: Number(jitter),
-            autoPause: { enabled: config.autoPause.enabled, threshold: Number(threshold) }
-          })
+          void store.updateConfig(
+            {
+              intervalMinutes: Number(interval),
+              jitterPercent: Number(jitter),
+              autoPause: { enabled: config.autoPause.enabled, threshold: Number(threshold) }
+            },
+            { key: 'config', ok: '已保存配置' }
+          )
         }
       >
-        保存
+        {props.pending['config'] === true ? '保存中…' : '保存'}
       </button>
     </div>
   )
@@ -276,14 +357,24 @@ export function SettingsTab(props: SettingsTabProps): React.ReactNode {
   }
   return (
     <div style={styles.root}>
+      <FlashView flash={state.flash} store={store} />
       <div style={styles.headerRow}>
         <span style={styles.title}>提供商保活</span>
-        <button style={styles.button} onClick={() => void store.updateConfig({ enabled: !status.config.enabled })}>
-          {status.config.enabled ? '总开关: 开' : '总开关: 关'}
+        <button
+          style={styles.button}
+          disabled={state.pending['master'] === true}
+          onClick={() =>
+            void store.updateConfig(
+              { enabled: !status.config.enabled },
+              { key: 'master', ok: status.config.enabled ? '已关闭保活' : '已开启保活' }
+            )
+          }
+        >
+          {state.pending['master'] === true ? '切换中…' : status.config.enabled ? '总开关: 开' : '总开关: 关'}
         </button>
         {status.paused
-          ? <button style={styles.button} onClick={() => void store.act('resume')}>恢复调度</button>
-          : <button style={styles.button} onClick={() => void store.act('pause')}>暂停调度</button>}
+          ? <button style={styles.button} disabled={state.pending['resume'] === true} onClick={() => void store.act('resume', undefined, { key: 'resume', ok: '已恢复调度' })}>{state.pending['resume'] === true ? '处理中…' : '恢复调度'}</button>
+          : <button style={styles.button} disabled={state.pending['pause'] === true} onClick={() => void store.act('pause', undefined, { key: 'pause', ok: '已暂停调度' })}>{state.pending['pause'] === true ? '处理中…' : '暂停调度'}</button>}
       </div>
       {state.error !== null && <div style={{ ...styles.row, color: '#e06c75' }}>错误: {state.error}</div>}
       <div style={styles.tabRow}>
@@ -300,7 +391,7 @@ export function SettingsTab(props: SettingsTabProps): React.ReactNode {
       {tab === 'providers' && (
         <div className="ka-section">
           <div style={styles.row}>配置</div>
-          <ConfigForm config={status.config} store={store} />
+          <ConfigForm config={status.config} store={store} pending={state.pending} />
           <div style={styles.row}>提供商</div>
           {((): React.ReactNode => {
             // Every registered route plus config-only leftovers (stale routes).

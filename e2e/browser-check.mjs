@@ -172,6 +172,19 @@ const optInClicked = await page.evaluate(() => {
   }
   return null
 })
+// Action feedback: a settled mutation announces itself via the transient
+// banner ([role=alert]; DSH Toast or our inline fallback).
+await sleep(1_500)
+const feedbackText = await page.evaluate(() => {
+  const el = document.querySelector('[role="alert"]')
+  return el ? (el.textContent || '').trim() : null
+})
+step(
+  'action-feedback-banner',
+  feedbackText !== null && feedbackText.includes('已加入保活调度'),
+  'alert=' + JSON.stringify(feedbackText)
+)
+await page.screenshot({ path: OUT + '/browser-3b-feedback.png' })
 await sleep(2_500)
 // Probe: replay the identical POST from page context, then read back status.
 const probe = await page.evaluate(async () => {

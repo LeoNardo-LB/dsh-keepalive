@@ -1,7 +1,9 @@
 /**
  * Client-side state: one polling store over the host HTTP face. The store
  * owns ALL client state (single source); components read snapshots only.
- * Countdowns are computed from nextFireAt + serverNow skew locally.
+ * Countdowns are computed from nextFireAt + serverNow skew locally. Every
+ * mutating call reports back through a pending key (button state) and a
+ * flash banner (result feedback).
  */
 import type { DailyStat, HistoryEntry, KeepaliveConfig, StatusSnapshot } from '../types.ts'
 
@@ -15,6 +17,21 @@ export interface ModelsResponse {
   models: Record<string, string[]>
 }
 
+/** One transient result banner shown after a mutating action settles. */
+export interface FlashMessage {
+  seq: number
+  kind: 'ok' | 'err'
+  text: string
+}
+
+/** Optional per-call feedback metadata supplied by the calling button. */
+export interface ActionMeta {
+  /** Pending key; distinct per button so concurrent actions stay honest. */
+  key?: string
+  /** Banner text on success; failures always banner kind 'err'. */
+  ok?: string
+}
+
 export interface KeepaliveUiState {
   status: StatusSnapshot | null
   history: HistoryResponse | null
@@ -23,6 +40,10 @@ export interface KeepaliveUiState {
   error: string | null
   /** Per-provider model lists; null until first fetched. */
   models: Record<string, string[]> | null
+  /** Last settled action banner; the view unmounts it via clearFlash. */
+  flash: FlashMessage | null
+  /** In-flight action keys (button spinners/disable states). */
+  pending: Record<string, true>
 }
 
 export type StoreListener = (state: KeepaliveUiState) => void
@@ -33,7 +54,7 @@ export const POLL_INTERVAL_MS = 5_000
 export type FetchLike = (url: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }>
 
 export function createInitialUiState(): KeepaliveUiState {
-  return { status: null, history: null, skewMs: 0, error: null, models: null }
+  return { status: null, history: null, skewMs: 0, error: null, models: null, flash: null, pending: {} }
 }
 
 /** Milliseconds until the provider's next shot, corrected by server skew. */
@@ -60,11 +81,15 @@ export interface KeepaliveStore {
   start(): void
   stop(): void
   refresh(): Promise<void>
-  updateConfig(patch: Partial<KeepaliveConfig>): Promise<void>
-  act(type: 'pause' | 'resume' | 'fire-now' | 'resume-provider' | 'remove-provider', provider?: string): Promise<void>
+  updateConfig(patch: Partial<KeepaliveConfig>, meta?: ActionMeta): Promise<void>
+  act(type: 'pause' | 'resume' | 'fire-now' | 'resume-provider' | 'remove-provider', provider?: string, meta?: ActionMeta): Promise<void>
   loadHistory(limit: number): Promise<void>
   loadModels(): Promise<void>
+  clearFlash(seq: number): void
 }
+
+/** Monotonic banner sequence; keyed Toast remounts on every show. */
+let flashSeq = 0
 
 export function createStore(fetchLike: FetchLike, now: () => number, pollMs: number = POLL_INTERVAL_MS): KeepaliveStore {
   let state = createInitialUiState()
@@ -75,6 +100,29 @@ export function createStore(fetchLike: FetchLike, now: () => number, pollMs: num
   function set(next: Partial<KeepaliveUiState>): void {
     state = { ...state, ...next }
     for (const listener of listeners) listener(state)
+  }
+
+  /** Flag a pending key; returns its releaser (idempotent per call site). */
+  function beginPending(key: string | undefined): (() => void) | undefined {
+    if (key === undefined) return undefined
+    set({ pending: { ...state.pending, [key]: true } })
+    return () => {
+      const next = { ...state.pending }
+      delete next[key]
+      set({ pending: next })
+    }
+  }
+
+  /** Publish the settled banner for a finished mutating call. */
+  function flashFor(meta: ActionMeta | undefined, error: unknown): void {
+    if (error === undefined && meta?.ok === undefined && meta?.key === undefined) return
+    flashSeq += 1
+    if (error === undefined) {
+      set({ flash: { seq: flashSeq, kind: 'ok', text: meta?.ok ?? '已完成' } })
+      return
+    }
+    const detail = error instanceof Error ? error.message : String(error)
+    set({ flash: { seq: flashSeq, kind: 'err', text: (meta?.ok ?? '操作') + '失败: ' + detail } })
   }
 
   async function pollStatus(): Promise<void> {
@@ -110,7 +158,8 @@ export function createStore(fetchLike: FetchLike, now: () => number, pollMs: num
       }
     },
     refresh: pollStatus,
-    async updateConfig(patch) {
+    async updateConfig(patch, meta) {
+      const release = beginPending(meta?.key)
       try {
         const response = await fetchLike('/plugins/dsh-keepalive/config', {
           method: 'POST',
@@ -119,11 +168,16 @@ export function createStore(fetchLike: FetchLike, now: () => number, pollMs: num
         })
         if (!response.ok) throw new Error('config ' + String(response.status))
         await pollStatus()
+        flashFor(meta, undefined)
       } catch (error) {
         set({ error: error instanceof Error ? error.message : String(error) })
+        flashFor(meta, error)
+      } finally {
+        release?.()
       }
     },
-    async act(type, provider) {
+    async act(type, provider, meta) {
+      const release = beginPending(meta?.key)
       try {
         const response = await fetchLike('/plugins/dsh-keepalive/action', {
           method: 'POST',
@@ -132,8 +186,12 @@ export function createStore(fetchLike: FetchLike, now: () => number, pollMs: num
         })
         if (!response.ok) throw new Error('action ' + String(response.status))
         await pollStatus()
+        flashFor(meta, undefined)
       } catch (error) {
         set({ error: error instanceof Error ? error.message : String(error) })
+        flashFor(meta, error)
+      } finally {
+        release?.()
       }
     },
     async loadHistory(limit) {
@@ -155,6 +213,10 @@ export function createStore(fetchLike: FetchLike, now: () => number, pollMs: num
       } catch (error) {
         set({ error: error instanceof Error ? error.message : String(error) })
       }
+    },
+    clearFlash(seq) {
+      if (state.flash?.seq !== seq) return
+      set({ flash: null })
     }
   }
 }

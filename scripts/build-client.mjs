@@ -14,7 +14,9 @@ const EXTERNALS = [
   'react',
   'react/jsx-runtime',
   '@deepseek-ai/cordis',
-  '@deepseek-ai/dsh-client-runtime/client'
+  '@deepseek-ai/dsh-client-runtime/client',
+  // Runtime-guarded require for the shared transient banner (FlashView).
+  '@deepseek-ai/dsh-client-ui-primitives'
 ]
 
 // Assembled with String.raw so backslash escapes survive every write path.

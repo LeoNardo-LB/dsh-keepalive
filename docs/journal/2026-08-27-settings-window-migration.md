@@ -20,6 +20,7 @@
 - E2E 适配：browser-check v4 重写为「设置→插件→提供商保活页签」导航路径；Dockerfile 固化 chromium + fonts-noto-cjk 使 UI 走查可复现；driver.mjs 本就是 HTTP 层无需改动。
 - 实机走查三轮排障：①puppeteer handle 与 React 5s 轮询竞争导致点击失联 → 改页面内原子 evaluate 点击；②「参与保活」按钮多卡同文案点错 → 按卡片内定点点击；③deepseek-official 首启预填竞态属正常现象，截图存证。browser 10/10 ALL PASS，截图在 e2e/evidence/browser-*.png。
 - feat(keeper) 7620581：消息追加 SHORT_REPLY_SUFFIX「请用不超过10个字回复」，maxTokens 1 → MAX_REPLY_TOKENS=32（导出常量，约 10 汉字硬预算）；driver S2 断言同步。vitest 54/54；docker E2E 8/8 PASS（S2 msgShape=true 实证新消息形状）。
+- feat(client) 操作反馈（用户需求 5）：store 增 pending 键 + flash 横幅（clearFlash(seq) 由视图卸载）；SettingsTab 全部变更按钮接 disabled +「…中」文案 + 成功/失败文案；横幅优先 DSH 原生 ui-primitives Toast（guarded require，缺失降级内联横幅）。browser-check 增 action-feedback-banner 断言：实机截获「✓ 已加入保活调度」。vitest 58/58；browser 11/11 ALL PASS；截图 browser-3b-feedback.png。
 - 验证输出（节选，当前会话内新鲜执行）：
   - `pnpm vitest run` → Test Files 9 passed (9), Tests 52 passed (52)
   - `pnpm typecheck` → tsc 双工程 --noEmit 0 错误

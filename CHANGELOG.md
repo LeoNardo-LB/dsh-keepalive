@@ -13,6 +13,8 @@
 
 ### 新增
 
+- 操作反馈：所有变更类按钮带 pending 态（禁用 + 「…中」文案），结算后经 DSH 原生 Toast（`ui-primitives`，缺失时内联横幅降级）弹出成功/失败横幅。
+
 - HTTP 面：`GET /plugins/dsh-keepalive/models`（逐提供商模型列表；单路由枚举失败不拖垮整体）。
 
 ## [0.1.0-dev.1] - 2026-08-25
