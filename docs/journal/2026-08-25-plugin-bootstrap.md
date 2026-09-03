@@ -17,7 +17,7 @@
 - 20:11 API 精查子代理交付（/home/leo-tkp/workspace/dsh-0.1.1-rc.2-api-report.md）：Domain 是 .table(name) 方法非 .tables 属性——修正 index.ts；slots.register 的 inject 是工厂函数；座位表（shell.overlay=list/root，conversation.composer.dock=list/session）。
 - 20:12 host 半全绿：typecheck 0 errors + vitest 36/36（引擎 10 用例：钳制/调度/补发/停放/手动控制）。commit 26d2a74。
 - 20:14 client 半：store（5s 轮询+本地倒计时）/Dock/Panel；入口 .ts→.tsx；build-client.mjs banner 转义被写管道吞——改 String.raw 组装。
-- 20:15 全量构建绿：lib/（host tsc）+ lib/client.js 23834B（module-table 格式，banner 与 failover 产物同构）。commit 5f06482。
+- 20:15 全量构建绿：lib/（host tsc）+ lib/client.js 23834B（module-table 标准格式）。commit 5f06482。
 - 20:16 schema 隐患修复：schemastery 无 z.null()；model 未指定改为省略字段；面板 toggle 不再展开整行。typecheck 0 errors + 36/36。commit（fix(config)）。
 - 20:17 Docker E2E 启动（bash-2 后台）：node:26 镜像 + 双 mock provider + 7 场景 driver；注意本轮镜像构建上下文发送于 schema 修复之前，正式证据以最终代码重建重跑为准。
 - 20:22 容器第 1 轮暴露：bundle 层已 insert 插件行，overlay 再 insert 同 id → duplicate loader entry id（fail-loud）。修：overlay 改 id 定向 config 覆盖。

@@ -1,4 +1,4 @@
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client';
+import type { Context as ClientContext } from '@deepseek-ai/cordis';
 export { countdownMs, createInitialUiState, formatCountdown } from './store.ts';
 export { createStore } from './store-instance.ts';
 export { SettingsTab } from './SettingsTab.tsx';

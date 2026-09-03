@@ -8,8 +8,8 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/cordis-plugin-timer'
 import type {} from '@deepseek-ai/dsh-host-webserver'
-import { settingsNamespace } from '@deepseek-ai/dsh-settings'
-import type { SettingsScope } from '@deepseek-ai/dsh-settings'
+import * as DshSettings from '@deepseek-ai/dsh-settings'
+import type { SettingsNamespace, SettingsScope } from '@deepseek-ai/dsh-settings'
 import { Config } from './config.ts'
 import { createEngine } from './engine.ts'
 import type { Engine } from './engine.ts'
@@ -32,7 +32,17 @@ const HISTORY_LIMIT = 500
 /** Daily stat horizon in days (spec: 90). */
 const STATS_KEEP_DAYS = 90
 
-const NAMESPACE = settingsNamespace('dsh-keepalive')
+/**
+ * V1/V2 dual-compat namespace: V1 (0.1.1-rc.2) exports the settingsNamespace
+ * factory; V2 (0.1.2-alpha.2+) removed it and register() takes the raw string.
+ * The optional-property probe compiles on BOTH generations' type sets (V2's
+ * SettingsNamespaceInput admits the branded type; V1's APIs require it), with
+ * the casts confined to this one seam.
+ */
+const nsFactory = (DshSettings as { settingsNamespace?: (value: string) => SettingsNamespace }).settingsNamespace
+const NAMESPACE: SettingsNamespace = nsFactory !== undefined
+  ? nsFactory('dsh-keepalive')
+  : ('dsh-keepalive' as SettingsNamespace)
 
 function localDay(at: number): string {
   const date = new Date(at)

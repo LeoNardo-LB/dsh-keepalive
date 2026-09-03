@@ -18,8 +18,7 @@
 5. **storageDomain**：ctx.storageDomain.open(domain) KV JSON 落 $DSH_HOME/storages（2026-08-25，安装树 README）。
 6. **client 半**：package.json dsh.client + exports["./client"]（lazy-CJS factory bundle）经 dsh-client-modules 扫描进 window.__DSH_BOOT__，slots 系统注册 UI；无自由页面路由，只能用既定座位（composer.dock / shell.overlay 等）（2026-08-23，.research/notes/client-plugins.md）。
 7. **本机环境**：dsh web 后台运行于 profile web（127.0.0.1:3080），~/.dsh/profiles/web/cordis.patch.yml 已有 MCP insert 先例；node v26.7.0 / pnpm 11.21.0 / docker 27.5.1 可用（2026-08-25，实机探测）。
-8. **参考实现**：用户自写 dsh-llm-failover 是 host+client 双半边插件的成熟同构模板（2026-08-23，.research）。
-9. **负向事实**：DSH 无 daemon；无跨重启调度器；ctx.llm 无非流式 API；host 事件到浏览器仅 11 个白名单（自定义事件需 patch 上游）（2026-08-25，架构调查报告）。
+8. **负向事实**：DSH 无 daemon；无跨重启调度器；ctx.llm 无非流式 API；host 事件到浏览器仅 11 个白名单（自定义事件需 patch 上游）（2026-08-25，架构调查报告）。
 
 ## 分节设计
 
@@ -103,7 +102,7 @@
 |------|------|----------|
 | stream API 形状与假设不符（chunk 类型/字段名） | 发送全失败 | engine 隔离层一函数；回滚 = revert 该 commit；Docker 验证第一轮即暴露 |
 | webServer.register 路由冲突/前缀规则不符 | 面板 404 | 路由前缀固定 /plugins/dsh-keepalive/；验证脚本 curl 断言 |
-| dsh.client bundle 格式（lazy-CJS factory）不匹配 | 浏览器半加载失败 | 以 failover 产物为模板对齐格式；Docker 浏览器人工清单把关 |
+| dsh.client bundle 格式（lazy-CJS factory）不匹配 | 浏览器半加载失败 | 按官方 client bundle 格式（lazy-CJS factory）对齐；Docker 浏览器人工清单把关 |
 | settings schema 与 Schemastery 版本不兼容 | 启动 fail-loud | Config 最小化（object/number/boolean/dict）；探针先行 |
 | storageDomain 域名冲突/结构不符 | 历史不持久 | 域名唯一 dsh-keepalive；结构 JSON 纯类型 |
 | Docker 内无真实 API key | 实机验证发不出 | mock provider（本地 OpenAI 兼容 stub）作为可路由 provider 注入 |

@@ -3,7 +3,10 @@
 FROM node:26
 
 # Same line as the production install + pnpm for profile plugin adds.
-RUN npm install -g --no-audit --no-fund pnpm@11 @deepseek-ai/dsh@0.1.1-rc.2
+# DSH_VERSION pins the host under test: V1 baseline 0.1.1-rc.2, or the V2
+# preview line (e.g. 0.1.2-alpha.5) for the dual-host compat matrix.
+ARG DSH_VERSION=0.1.1-rc.2
+RUN npm install -g --no-audit --no-fund pnpm@11 @deepseek-ai/dsh@${DSH_VERSION}
 
 # Headless chromium + CJK fonts for the browser-half verification.
 RUN apt-get update \

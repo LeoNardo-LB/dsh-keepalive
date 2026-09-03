@@ -4,7 +4,7 @@
 
 **卡片格式**：标题（含全局编号）+ Tag + 状态 checkbox + ≤3 行摘要 + 链接。需求全文、实现要点、验证证据一律写在链接目标（spec/journal）中，不内联。登记新批次用 new-batch.sh（自动建 journal 文件）；改动后跑 check.sh --deployed 校验机械不变量。
 
-**编号**：全局递增，不回收。下一编号：**#4**。
+**编号**：全局递增，不回收。下一编号：**#5**。
 
 **优先级定义**（P0-P3 唯一归宿：系统 workflows/requirements.md「优先级定义」节）：
 
@@ -28,6 +28,10 @@
   - → 详情：docs/journal/（本条为 init 首条示例，完结后迁移）
 
 ## P1 — 核心功能需求
+
+- [~] **#4 双宿主兼容改造（0.1.1-rc.2 ⇄ 0.1.2-alpha.5）** `feat`
+  - 已实施 0.1.0-dev.2：ns 能力探测 + client 类型源切 cordis + EXTERNALS 清理 + peerDeps 联合区间（typecheck + 58 单测 + build 绿）
+  - 待验证：双宿主 docker e2e（V2 窗口）；→ 设计全文：workspace/2026-09-02-dsh插件矩阵统一改造-to-spec.md（节 1-3）
 
 ## P2 — 优化与锦上添花
 

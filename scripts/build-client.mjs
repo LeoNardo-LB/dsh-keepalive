@@ -3,7 +3,6 @@
  * module-table format: window.__ModuleLoader__.load({ id, factory }) with a
  * CJS factory resolving externals through the injected require (platform
  * modules + served bundles). Inline styles only - no CSS pipeline.
- * (Template: dsh-llm-failover scripts/build-client.mjs)
  */
 import { build } from 'esbuild'
 import { mkdirSync, writeFileSync } from 'node:fs'
@@ -14,7 +13,6 @@ const EXTERNALS = [
   'react',
   'react/jsx-runtime',
   '@deepseek-ai/cordis',
-  '@deepseek-ai/dsh-client-runtime/client',
   // Runtime-guarded require for the shared transient banner (FlashView).
   '@deepseek-ai/dsh-client-ui-primitives'
 ]

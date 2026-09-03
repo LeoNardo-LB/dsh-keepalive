@@ -6,6 +6,8 @@
 
 ### 变更
 
+- **V1/V2 双宿主兼容（0.1.1-rc.2 ⇄ 0.1.2-alpha.5）**：host 半命名空间解析改 `in` 能力探测（V2 移除了 `settingsNamespace` 工厂）；client 半 `ClientContext` 类型源改 cordis 直取（rc.2 中它本就是 cordis `Context` 别名）；构建脚本 EXTERNALS 清除死条目；peerDependencies 声明联合区间。产物运行时行为零变化（详见 workspace/2026-09-02-dsh插件矩阵统一改造-to-spec.md 节 1-3）。
+
 - 配置界面整体迁入 DSH 原生设置窗口：新增 `settings.plugins.tab` 页签「提供商保活」；移除对话流 composer.dock 摘要条与 shell.overlay 面板。
 - 保活模型改为下拉选择（数据源 `GET /plugins/dsh-keepalive/models`），不再手填。
 - 历史记录可查看模型回复：keeper 捕获回复文本（头部 4000 字符）随 `HistoryEntry.reply` 持久化下发。

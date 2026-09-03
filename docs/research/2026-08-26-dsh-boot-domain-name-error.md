@@ -44,7 +44,7 @@
 
 数据迁移评估：**无需迁移、零丢失**。宿主 `~/.dsh/storages` 无旧域文件；E2E 数据在容器 `/e2e/dsh-home`（Dockerfile:16）随容器丢弃。机制上 rename 也无内置支持：json 后端要求文件头 `name === descriptor.name`（dsh-storage-json/lib/index.js:96），改名即新开空 unit；version 仅做同名校验（:98），不是迁移通道。未来真要迁：手工复制 `<old>.json` → `<new>.json` 并改文件头 name 字段即可。
 
-风险评估：低。重建仅影响 lib/；域名 / namespace / HTTP 面 / 前端互不重叠；重启补发依赖的 nextFireAt 存于域 global（src/domain.ts:34-37），旧数据本就不存在。loader entry 名合法性：cordis-plugin-loader 仅查 id 重复（lib/index.js:81）并按 ESM 包名 import（:268-272）；本 profile 已加载 `dsh-llm-failover`、`dsh-turn-notify` 及 `@deepseek-ai/*` 作用域条目，均为连字符/作用域名 → loader 层不适用 UNIT_NAME_RE，两层规则不同源。
+风险评估：低。重建仅影响 lib/；域名 / namespace / HTTP 面 / 前端互不重叠；重启补发依赖的 nextFireAt 存于域 global（src/domain.ts:34-37），旧数据本就不存在。loader entry 名合法性：cordis-plugin-loader 仅查 id 重复（lib/index.js:81）并按 ESM 包名 import（:268-272）；本 profile 已加载 `dsh-turn-notify` 及 `@deepseek-ai/*` 作用域条目，均为连字符/作用域名 → loader 层不适用 UNIT_NAME_RE，两层规则不同源。
 
 ## 遗留问题
 
