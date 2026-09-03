@@ -16,7 +16,7 @@ import type { Engine } from './engine.ts'
 import { createKeeper } from './keeper.ts'
 import type { ShotResult } from './keeper.ts'
 import { ROUTE_PREFIX, createRoutes } from './routes.ts'
-import { appendHistory, bumpDailyStats, pruneDailyStats } from './history.ts'
+import { appendHistory, pruneDailyStats, recordDailyShot } from './history.ts'
 import { keepaliveDomain } from './domain.ts'
 import type { DailyStat, HistoryEntry, KeepaliveConfig } from './types.ts'
 
@@ -131,8 +131,7 @@ export function apply(ctx: Context, config: Partial<KeepaliveConfig> = {}): void
         })
         .catch((error: unknown) => logger.warn('dsh-keepalive: history persist failed: ' + String(error)))
       const day = localDay(at)
-      void statsTable
-        .update(day, (current) => bumpDailyStats({ [day]: current }, day, entry.status, entry.latencyMs)[day]!)
+      void recordDailyShot(statsTable, day, entry.status, entry.latencyMs)
         .catch((error: unknown) => logger.warn('dsh-keepalive: stats persist failed: ' + String(error)))
     }
 
