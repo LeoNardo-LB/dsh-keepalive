@@ -39,22 +39,34 @@ page.on('console', (message) => {
   if (message.type() === 'error') results.consoleErrors.push('CONSOLE: ' + message.text().slice(0, 300))
 })
 
-/** Click atomically inside the page (React re-renders detach saved handles). */
+/**
+ * Click with a REAL trusted mouse event (puppeteer ElementHandle.click): host
+ * triggers often listen to pointerdown, which synthetic .click() never fires.
+ * Falls back to an in-page click when the handle detaches mid-flight.
+ */
 async function clickIn(scopeSelector, pattern, { menuItems = false } = {}) {
-  return page.evaluate(({ scopeSelector, source, flags, menuItems }) => {
+  const handle = await page.evaluateHandle(({ scopeSelector, source, flags, menuItems }) => {
     const regex = new RegExp(source, flags)
+    const scope = menuItems
+      ? document
+      : (scopeSelector === null ? document : document.querySelector(scopeSelector))
     const pool = menuItems
-      ? document.querySelectorAll('[role="menuitem"], [class*="menu" i] [class*="item" i], [class*="menu" i] button')
-      : (scopeSelector === null ? document : document.querySelector(scopeSelector))?.querySelectorAll('button, [class*="row" i], [class*="title" i]') ?? []
+      ? scope.querySelectorAll('[role="menuitem"], [class*="menu" i] [class*="item" i], [class*="menu" i] button')
+      : (scope ?? document).querySelectorAll('button, [class*="row" i], [class*="title" i]')
     for (const node of pool) {
-      const text = ((node.textContent) || '').trim()
-      if (regex.test(text)) {
-        node.click()
-        return text.slice(0, 60)
-      }
+      if (regex.test(((node.textContent) || '').trim())) return node
     }
     return null
   }, { scopeSelector, source: pattern.source, flags: pattern.flags, menuItems })
+  const element = handle.asElement()
+  if (element === null) return null
+  const text = await element.evaluate((node) => ((node.textContent) || '').trim().slice(0, 60))
+  try {
+    await element.click()
+  } catch {
+    try { await element.evaluate((node) => { node.click(); return null }) } catch { return text }
+  }
+  return text
 }
 
 const bodyText = () => page.evaluate(() => document.body.innerText)
