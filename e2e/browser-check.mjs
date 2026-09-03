@@ -5,9 +5,17 @@
  * menu rows. Console/pageerror capture + screenshots at every stage.
  */
 import puppeteer from 'puppeteer-core'
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 
 const WEB = 'http://127.0.0.1:8180'
+// dsh 0.1.2 gates the web app behind a boot token (driver's plugin routes are
+// unfenced; the app index is not). Exchange the printed token for the auth
+// cookie by landing on /?token=... once.
+const bootToken = (() => {
+  const log = readFileSync('/e2e/evidence/dsh-web.log', 'utf8')
+  const match = log.match(/token=([A-Za-z0-9_-]+)/)
+  return match === null ? null : match[1]
+})()
 const OUT = '/e2e/evidence'
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const results = { steps: [], consoleErrors: [] }
@@ -51,7 +59,11 @@ async function clickIn(scopeSelector, pattern, { menuItems = false } = {}) {
 
 const bodyText = () => page.evaluate(() => document.body.innerText)
 
-await page.goto(WEB, { waitUntil: 'domcontentloaded', timeout: 60_000 })
+if (bootToken === null) {
+  console.log('FAIL [auth-token] no boot token found in /e2e/evidence/dsh-web.log')
+  process.exit(1)
+}
+await page.goto(WEB + '/?token=' + bootToken, { waitUntil: 'domcontentloaded', timeout: 60_000 })
 // Warm one shot over HTTP so history has a row to inspect immediately.
 await fetch(WEB + '/plugins/dsh-keepalive/action', {
   method: 'POST',
