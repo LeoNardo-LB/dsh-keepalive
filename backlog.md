@@ -4,7 +4,7 @@
 
 **卡片格式**：标题（含全局编号）+ Tag + 状态 checkbox + ≤3 行摘要 + 链接。需求全文、实现要点、验证证据一律写在链接目标（spec/journal）中，不内联。登记新批次用 new-batch.sh（自动建 journal 文件）；改动后跑 check.sh --deployed 校验机械不变量。
 
-**编号**：全局递增，不回收。下一编号：**#5**。
+**编号**：全局递增，不回收。下一编号：**#6**。
 
 **优先级定义**（P0-P3 唯一归宿：系统 workflows/requirements.md「优先级定义」节）：
 
@@ -28,6 +28,10 @@
   - → 详情：docs/journal/（本条为 init 首条示例，完结后迁移）
 
 ## P1 — 核心功能需求
+
+- [~] **#5 客户端 UI 重写：dsh-client-ui-primitives 全面接入** `feat`
+  - 已实施（commit ba4fce6 + ff22b19）：展示层重写为宿主原生组件 + --dsw-alias-* 令牌 + 运行时注入 CSS；砍 0.1.1-rc.2 CLIENT 兼容（spec D9）
+  - 待用户验收后迁移 journal；→ 设计全文：docs/specs/2026-09-04-ui-rewrite-dsh-primitives.md
 
 - [~] **#4 双宿主兼容改造（0.1.1-rc.2 ⇄ 0.1.2-alpha.5）** `feat`
   - 已实施 0.1.0-dev.2（commit f9ff414）：全部自动化验证绿——typecheck + 58 单测 + build + **docker e2e 双宿主双轮 8/8 PASS**（rc.2 与 alpha.5 镜像）
