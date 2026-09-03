@@ -59,6 +59,22 @@ async function clickIn(scopeSelector, pattern, { menuItems = false } = {}) {
 
 const bodyText = () => page.evaluate(() => document.body.innerText)
 
+/** Dump every visible button for offline diagnosis on failure. */
+async function dumpButtons(name) {
+  const buttons = await page.$$eval('button', (nodes) =>
+    nodes.map((node) => ({
+      text: ((node.textContent) || '').trim().slice(0, 60),
+      aria: node.getAttribute('aria-label'),
+      cls: (node.className || '').toString().slice(0, 80)
+    }))
+  )
+  writeFileSync(OUT + '/' + name, JSON.stringify(buttons, null, 2))
+  return buttons
+}
+async function dumpBody(name) {
+  writeFileSync(OUT + '/' + name, (await bodyText()).slice(0, 3000))
+}
+
 if (bootToken === null) {
   console.log('FAIL [auth-token] no boot token found in /e2e/evidence/dsh-web.log')
   process.exit(1)
@@ -79,7 +95,8 @@ for (let round = 0; round < 6; round += 1) {
 }
 await page.screenshot({ path: OUT + '/browser-1-landing.png' })
 
-// Open the native Settings window from the sidebar foot.
+// Open the native Settings window from the sidebar foot. Text first, then
+// the aria-label fallback; dump the DOM for diagnosis when it fails.
 let settingsClick = await clickIn(null, /^(设置|Settings)$/u)
 if (settingsClick === null) {
   settingsClick = await page.evaluate(() => {
@@ -88,12 +105,16 @@ if (settingsClick === null) {
     return null
   })
 }
-await sleep(2_000)
+await sleep(2_500)
 const afterSettingsText = await bodyText()
+if (!/插件|通用设置|Plugins|General/i.test(afterSettingsText)) {
+  await dumpButtons('dom-buttons.json')
+  await dumpBody('dom-body.txt')
+}
 step('settings-window-opens', settingsClick !== null && /插件|通用设置|Plugins|General/i.test(afterSettingsText), 'clicked=' + JSON.stringify(settingsClick))
 await page.screenshot({ path: OUT + '/browser-2-settings.png' })
 
-const pluginsClick = await clickIn(null, /^插件$/u)
+const pluginsClick = await clickIn(null, /^(插件|Plugins)$/u)
 await sleep(1_500)
 step('plugins-section-open', pluginsClick !== null, 'clicked=' + JSON.stringify(pluginsClick))
 
