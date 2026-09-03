@@ -1,0 +1,212 @@
+/*
+ * dsh-keepalive settings tab stylesheet (spec D1).
+ * Colors/spacing/shape ride the host --dsw-alias-* token system so light/dark
+ * themes follow the host automatically; typography sizes are local tokens
+ * because the host token set has no font-size scale.
+ */
+
+.ka-root {
+  --ka-fs-base: 13px;
+  --ka-fs-sm: 12px;
+  --ka-fs-caption: 11px;
+  --ka-gap: 8px;
+  font-family: var(--dsw-font-family, inherit);
+  font-size: var(--ka-fs-base);
+  color: var(--dsw-alias-label-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ---------- header ---------- */
+
+.ka-header {
+  display: flex;
+  align-items: center;
+  gap: var(--ka-gap);
+  flex-wrap: wrap;
+}
+
+.ka-title {
+  font-weight: 600;
+  margin-right: auto;
+}
+
+.ka-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---------- shared bits ---------- */
+
+.ka-section-title {
+  font-size: var(--ka-fs-caption);
+  color: var(--dsw-alias-label-caption);
+}
+
+.ka-empty {
+  color: var(--dsw-alias-label-dimmed);
+  font-size: var(--ka-fs-sm);
+  padding: 6px 0;
+}
+
+.ka-error-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ka-gap);
+  color: var(--dsw-alias-state-error-primary);
+  font-size: var(--ka-fs-sm);
+}
+
+.ka-loading-row {
+  color: var(--dsw-alias-label-dimmed);
+}
+
+.ka-ok { color: var(--dsw-alias-state-success-primary); }
+.ka-err { color: var(--dsw-alias-state-error-primary); }
+.ka-warn { color: var(--dsw-alias-state-warn-primary); }
+.ka-dim { color: var(--dsw-alias-label-dimmed); }
+
+.ka-pill-ok { color: var(--dsw-alias-state-success-primary); }
+.ka-pill-warn { color: var(--dsw-alias-state-warn-primary); }
+.ka-pill-err { color: var(--dsw-alias-state-error-primary); }
+.ka-pill-dim { color: var(--dsw-alias-label-dimmed); }
+
+.ka-countdown {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.ka-num { font-variant-numeric: tabular-nums; }
+
+/* ---------- config form ---------- */
+
+.ka-form-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ka-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--ka-fs-sm);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.ka-field input {
+  width: 72px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- provider cards ---------- */
+
+.ka-card {
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-1);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ka-card:hover { border-color: var(--dsw-alias-border-l2); }
+
+.ka-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--ka-gap);
+  flex-wrap: wrap;
+}
+
+.ka-card-name { font-weight: 600; }
+
+.ka-card-id {
+  font-size: var(--ka-fs-caption);
+  color: var(--dsw-alias-label-dimmed);
+}
+
+.ka-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: var(--ka-fs-sm);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.ka-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ka-card-actions .ka-actions-secondary { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+
+.ka-model-label {
+  font-size: var(--ka-fs-sm);
+  color: var(--dsw-alias-label-secondary);
+}
+
+/* ---------- history / stats disclosure ---------- */
+
+.ka-disclosure-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ka-history-section, .ka-stats-section { padding: 2px 0; }
+
+.ka-entry-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0 4px 4px;
+}
+
+.ka-reply-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 0 6px 4px;
+}
+
+.ka-detail-label {
+  font-size: var(--ka-fs-caption);
+  color: var(--dsw-alias-label-caption);
+}
+
+.ka-detail-block {
+  white-space: pre-wrap;
+  word-break: break-word;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-layer-2);
+  padding: 8px 10px;
+  font-size: var(--ka-fs-sm);
+  margin: 2px 0 6px;
+}
+
+.ka-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 3px 0;
+  font-size: var(--ka-fs-sm);
+}
+
+.ka-stat-row .ka-stat-day { color: var(--dsw-alias-label-dimmed); min-width: 86px; }
+
+.ka-stat-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}

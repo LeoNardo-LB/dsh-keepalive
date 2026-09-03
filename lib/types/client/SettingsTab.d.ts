@@ -1,4 +1,4 @@
-import type { KeepaliveUiState, KeepaliveStore } from './store.ts';
+import type { KeepaliveStore, KeepaliveUiState } from './store.ts';
 export interface SettingsTabProps {
     state: KeepaliveUiState;
     store: KeepaliveStore;

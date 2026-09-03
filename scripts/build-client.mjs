@@ -2,11 +2,23 @@
  * Build the browser half (src/client -> lib/client.js) in the DSH client
  * module-table format: window.__ModuleLoader__.load({ id, factory }) with a
  * CJS factory resolving externals through the injected require (platform
- * modules + served bundles). Inline styles only - no CSS pipeline.
+ * modules + served bundles). Stylesheets are compiled to string modules by
+ * the css loader below and injected at runtime (see src/client/styles.ts).
  */
 import { build } from 'esbuild'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
+
+/** CSS files become exported strings; no external css pipeline. */
+const cssToStringPlugin = {
+  name: 'ka-css-to-string',
+  setup(buildApi) {
+    buildApi.onLoad({ filter: /\.css$/ }, (args) => ({
+      contents: 'export default ' + JSON.stringify(readFileSync(args.path, 'utf8')),
+      loader: 'js'
+    }))
+  }
+}
 
 /** Resolved from the loader module table at runtime (never inlined). */
 const EXTERNALS = [
@@ -37,6 +49,7 @@ const result = await build({
   jsx: 'automatic',
   loader: { '.ts': 'ts', '.tsx': 'tsx' },
   external: EXTERNALS,
+  plugins: [cssToStringPlugin],
   write: false,
   banner: {
     js: BANNER
