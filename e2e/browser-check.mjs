@@ -116,10 +116,19 @@ await page.screenshot({ path: OUT + '/browser-1-landing.png' })
     const open = await clickIn(null, /^Open$/)
     await sleep(2_500)
     writeFileSync(OUT + '/dom-ws-after-open.txt', (await bodyText()).slice(0, 3000))
-    const seat = await clickIn(null, /^Standard mode$/)
-    await sleep(4_000)
+    let seat = null
+    const entered = /Describe what you want|Send message/.test(await bodyText())
+    if (!entered) {
+      seat = await clickIn(null, /^Standard mode$/)
+      await sleep(4_000)
+    }
+    // Dismiss any leftover popover so it cannot swallow the next click.
+    await page.keyboard.press('Escape')
+    await sleep(600)
+    await page.keyboard.press('Escape')
+    await sleep(400)
     writeFileSync(OUT + '/dom-after-workspace.txt', (await bodyText()).slice(0, 3000))
-    results.workspacePick = { home, open, seat }
+    results.workspacePick = { home, open, seat, entered }
   }
 }
 
