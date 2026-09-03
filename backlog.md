@@ -30,8 +30,8 @@
 ## P1 — 核心功能需求
 
 - [~] **#4 双宿主兼容改造（0.1.1-rc.2 ⇄ 0.1.2-alpha.5）** `feat`
-  - 已实施 0.1.0-dev.2：ns 能力探测 + client 类型源切 cordis + EXTERNALS 清理 + peerDeps 联合区间（typecheck + 58 单测 + build 绿）
-  - 待验证：双宿主 docker e2e（V2 窗口）；→ 设计全文：workspace/2026-09-02-dsh插件矩阵统一改造-to-spec.md（节 1-3）
+  - 已实施 0.1.0-dev.2（commit f9ff414）：全部自动化验证绿——typecheck + 58 单测 + build + **docker e2e 双宿主双轮 8/8 PASS**（rc.2 与 alpha.5 镜像）
+  - 待用户验收后迁移 journal；→ 设计全文：workspace/2026-09-02-dsh插件矩阵统一改造-to-spec.md
 
 ## P2 — 优化与锦上添花
 
