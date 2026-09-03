@@ -95,6 +95,24 @@ for (let round = 0; round < 6; round += 1) {
 }
 await page.screenshot({ path: OUT + '/browser-1-landing.png' })
 
+// dsh 0.1.2 boots into the workspace chooser; pick the standard seat to
+// reach the main app before any settings navigation is possible.
+{
+  const chooserText = await bodyText()
+  if (/Choose a workspace/.test(chooserText)) {
+    await page.evaluate(() => {
+      const node = document.querySelector('button[aria-label="Choose workspace"]')
+      if (node) node.click()
+      return null
+    })
+    await sleep(1_500)
+    const seat = await clickIn(null, /^(Standard mode|Into the Unknown)$/)
+    await sleep(4_000)
+    writeFileSync(OUT + '/dom-after-workspace.txt', (await bodyText()).slice(0, 3000))
+    results.workspacePick = seat
+  }
+}
+
 // Open the native Settings window from the sidebar foot. Text first, then
 // the aria-label fallback; dump the DOM for diagnosis when it fails.
 let settingsClick = await clickIn(null, /^(设置|Settings)$/u)
