@@ -26,13 +26,20 @@ dsh web --patch /e2e/e2e-overlay.yml --host 127.0.0.1 --port 8180 >/e2e/evidence
 DSH_WEB=$!
 trap 'kill $DSH_WEB $MOCK_PRIMARY $MOCK_BACKUP $MOCK_SPARE 2>/dev/null || true' EXIT
 
-echo '=== [4/5] driver ==='
+echo '=== [4/6] driver ==='
 set +e
 node /e2e/driver.mjs
 DRIVER_EXIT=$?
 set -e
 
-echo '=== [5/5] dsh log tail ==='
+echo '=== [5/6] browser check (new primitives UI) ==='
+set +e
+node /e2e/browser-check.mjs
+BROWSER_EXIT=$?
+set -e
+
+echo '=== [6/6] dsh log tail ==='
 tail -n 30 /e2e/evidence/dsh-web.log || true
 
-exit $DRIVER_EXIT
+[ "$DRIVER_EXIT" -eq 0 ] && [ "$BROWSER_EXIT" -eq 0 ] || exit 1
+exit 0

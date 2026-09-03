@@ -1,7 +1,8 @@
 /**
- * Headless-browser verification v4: trusted clicks through the NATIVE Settings
- * window (sidebar trigger -> Plugins -> 提供商保活 tab), reply dialog inspection,
- * console/pageerror capture, screenshots.
+ * Headless-browser verification v5: the rebuilt primitives UI. Trusted
+ * clicks through the NATIVE Settings window (sidebar -> Plugins -> 提供商保活),
+ * then through the new component set: data-ka hooks + ka-* classes + portal
+ * menu rows. Console/pageerror capture + screenshots at every stage.
  */
 import puppeteer from 'puppeteer-core'
 import { writeFileSync } from 'node:fs'
@@ -10,9 +11,11 @@ const WEB = 'http://127.0.0.1:8180'
 const OUT = '/e2e/evidence'
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const results = { steps: [], consoleErrors: [] }
+let failed = 0
 const step = (name, pass, detail) => {
   results.steps.push({ name, pass, detail })
-  console.log((pass ? 'PASS' : 'WARN') + ' [' + name + '] ' + detail)
+  if (!pass) failed += 1
+  console.log((pass ? 'PASS' : 'FAIL') + ' [' + name + '] ' + detail)
 }
 
 const browser = await puppeteer.launch({
@@ -27,67 +30,29 @@ page.on('pageerror', (error) => results.consoleErrors.push('PAGEERROR: ' + Strin
 page.on('console', (message) => {
   if (message.type() === 'error') results.consoleErrors.push('CONSOLE: ' + message.text().slice(0, 300))
 })
-results.configRequests = []
-page.on('request', (request) => {
-  if (request.url().includes('/plugins/dsh-keepalive/config')) results.configRequests.push('REQ ' + request.method() + ' ' + request.postData())
-})
-page.on('response', async (response) => {
-  if (response.url().includes('/plugins/dsh-keepalive/config')) {
-    results.configRequests.push('RES ' + String(response.status()) + ' ' + JSON.stringify(await response.json().catch(() => null)))
-  }
-})
 
-async function clickButton(pattern) {
-  // Click atomically INSIDE the page: React replaces nodes on every 5s store
-  // emit, so a puppeteer handle captured earlier can be detached at click
-  // time (silent no-op). Resolve + click in one evaluate instead.
-  const clicked = await page.evaluate((source) => {
-    const regex = new RegExp(source.pattern, source.flags)
-    for (const node of document.querySelectorAll('button')) {
-      if (regex.test(((node.textContent) || '').trim())) {
+/** Click atomically inside the page (React re-renders detach saved handles). */
+async function clickIn(scopeSelector, pattern, { menuItems = false } = {}) {
+  return page.evaluate(({ scopeSelector, source, flags, menuItems }) => {
+    const regex = new RegExp(source, flags)
+    const pool = menuItems
+      ? document.querySelectorAll('[role="menuitem"], [class*="menu" i] [class*="item" i], [class*="menu" i] button')
+      : (scopeSelector === null ? document : document.querySelector(scopeSelector))?.querySelectorAll('button, [class*="row" i], [class*="title" i]') ?? []
+    for (const node of pool) {
+      const text = ((node.textContent) || '').trim()
+      if (regex.test(text)) {
         node.click()
-        return (node.textContent || '').trim()
+        return text.slice(0, 60)
       }
     }
     return null
-  }, { pattern: pattern.source, flags: pattern.flags })
-  return clicked
+  }, { scopeSelector, source: pattern.source, flags: pattern.flags, menuItems })
 }
 
-/** Multi-strategy click: exact text, then aria-label, then css-class hint. */
-async function clickFirst(patterns) {
-  for (const pattern of patterns) {
-    if (pattern instanceof RegExp) {
-      const clicked = await clickButton(pattern)
-      if (clicked !== null) return { via: String(pattern), clicked }
-    } else {
-      const handles = await page.$$(pattern.selector)
-      if (handles.length > 0) {
-        await handles[0].click()
-        return { via: pattern.selector, clicked: null }
-      }
-    }
-  }
-  return null
-}
-
-/** Dump every visible button for offline diagnosis on failure. */
-async function dumpButtons(name) {
-  const buttons = await page.$$eval('button', (nodes) =>
-    nodes.map((node) => ({
-      text: ((node.textContent) || '').trim().slice(0, 60),
-      aria: node.getAttribute('aria-label'),
-      cls: (node.className || '').toString().slice(0, 80)
-    }))
-  )
-  writeFileSync(OUT + '/' + name, JSON.stringify(buttons, null, 2))
-  return buttons
-}
 const bodyText = () => page.evaluate(() => document.body.innerText)
 
 await page.goto(WEB, { waitUntil: 'domcontentloaded', timeout: 60_000 })
-// Warm one shot over HTTP so the history tab has a row to inspect (the
-// scheduled shots are ~30min away; the dialog needs an entry now).
+// Warm one shot over HTTP so history has a row to inspect immediately.
 await fetch(WEB + '/plugins/dsh-keepalive/action', {
   method: 'POST',
   headers: { 'content-type': 'application/json' },
@@ -96,47 +61,37 @@ await fetch(WEB + '/plugins/dsh-keepalive/action', {
 await sleep(6_000)
 await sleep(6_000)
 for (let round = 0; round < 6; round += 1) {
-  const hit = await clickButton(/^(continue|got it|ok|i understand|知道了|继续)/i)
+  const hit = await clickIn(null, /^(continue|got it|ok|i understand|知道了|继续)/i)
   if (hit === null) break
   await sleep(2_000)
 }
 await page.screenshot({ path: OUT + '/browser-1-landing.png' })
 
-// Open the native Settings window from the sidebar foot. The trigger renders
-// an icon-only button when the sidebar column is narrow, so fall through
-// aria-label and class hints before dumping the DOM for diagnosis.
-let settingsClick = await clickFirst([
-  /^(设置|Settings)$/u,
-  { selector: 'button[aria-label*="etting" i]' },
-  { selector: '[class*="trigger" i] button, button[class*="trigger" i]' }
-])
+// Open the native Settings window from the sidebar foot.
+let settingsClick = await clickIn(null, /^(设置|Settings)$/u)
 if (settingsClick === null) {
-  const inventory = await dumpButtons('dom-buttons.json')
-  settingsClick = { via: 'diag', clicked: JSON.stringify(inventory.slice(0, 12)) }
+  settingsClick = await page.evaluate(() => {
+    const node = document.querySelector('button[aria-label*="etting" i]')
+    if (node) { node.click(); return node.getAttribute('aria-label') }
+    return null
+  })
 }
 await sleep(2_000)
 const afterSettingsText = await bodyText()
-step(
-  'settings-window-opens',
-  settingsClick.via !== 'diag' && /插件|通用设置|Plugins|General/i.test(afterSettingsText),
-  'via=' + settingsClick.via + ' clicked=' + JSON.stringify(settingsClick.clicked)
-)
+step('settings-window-opens', settingsClick !== null && /插件|通用设置|Plugins|General/i.test(afterSettingsText), 'clicked=' + JSON.stringify(settingsClick))
 await page.screenshot({ path: OUT + '/browser-2-settings.png' })
 
-// Navigate to the Plugins section.
-const pluginsClick = (await clickFirst([/^插件$/, /^Plugins$/i])) ?? await clickFirst([{ selector: '[class*="nav" i] >> mock-none' }]).catch(() => null)
+const pluginsClick = await clickIn(null, /^插件$/u)
 await sleep(1_500)
-step('plugins-section-open', pluginsClick !== null && pluginsClick.via !== undefined, 'via=' + (pluginsClick ? pluginsClick.via : 'none'))
+step('plugins-section-open', pluginsClick !== null, 'clicked=' + JSON.stringify(pluginsClick))
 
-// Our tab sits in the Plugins tab bar.
-const tabClicked = await clickButton(/^提供商保活$/)
+const tabClicked = await clickIn(null, /^提供商保活$/u)
 await sleep(2_500)
+const rootPresent = await page.evaluate(() => document.querySelector('[data-ka="root"]') !== null)
 const panelText = await bodyText()
-step(
-  'keepalive-tab-mounts',
-  tabClicked !== null && (panelText.includes('参与保活') || panelText.includes('总开关')),
-  'tab=' + JSON.stringify(tabClicked)
-)
+step('keepalive-tab-mounts', tabClicked !== null && rootPresent, 'tab=' + JSON.stringify(tabClicked) + ' dataKaRoot=' + String(rootPresent))
+step('primitives-gate-passed', !/宿主未供应 UI 组件模块/.test(panelText), 'gateError=' + String(/宿主未供应/.test(panelText)))
+step('stylesheet-injected', await page.evaluate(() => document.querySelector('style[data-plugin-css="dsh-keepalive"]') !== null), 'styleTag present')
 await page.screenshot({ path: OUT + '/browser-3-panel.png' })
 
 const listed = await page.evaluate(() => {
@@ -148,95 +103,121 @@ step('all-providers-listed', Object.values(listed).every(Boolean), JSON.stringif
 
 // Master switch on when off so cards render live countdowns.
 {
-  const before = panelText
-  if (/总开关: 关/.test(before)) {
-    await clickButton(/^总开关: 关$/)
+  const masterText = await page.evaluate(() => {
+    const node = document.querySelector('[data-ka="master"]')
+    return node ? (node.textContent || '').trim() : null
+  })
+  if (masterText !== null && /保活已停用/.test(masterText)) {
+    await clickIn(null, /保活已停用/)
     await sleep(7_000) // one poll cycle + engine reschedule
   }
 }
 const liveText = await bodyText()
-const hasCountdown = /\d{1,2}:\d{2}:\d{2}|\d{1,2}:\d{2}/.test(liveText)
-step('countdown-visible', hasCountdown, 'masterOn=' + String(/总开关: 开/.test(liveText)))
+const hasCountdown = /d{1,2}:d{2}:d{2}|d{1,2}:d{2}/.test(liveText)
+step('countdown-visible', hasCountdown, 'masterOn=' + String(/保活已开启/.test(liveText)))
+await page.screenshot({ path: OUT + '/browser-3b-countdown.png' })
 
-// Opt the spare provider in straight from ITS card (several cards can carry
-// the same button text; scope the click to the card holding the spare id).
-const optInClicked = await page.evaluate(() => {
-  for (const card of document.querySelectorAll('div')) {
-    if (!card.textContent || !card.textContent.includes('mock-spare')) continue
-    for (const node of card.querySelectorAll('button')) {
-      if (/参与保活/.test((node.textContent || '').trim())) {
-        node.click()
-        return (node.textContent || '').trim()
-      }
-    }
-  }
-  return null
-})
-// Action feedback: a settled mutation announces itself via the transient
-// banner ([role=alert]; DSH Toast or our inline fallback).
+// Opt the spare provider in from ITS card, scoped by data-ka-card.
+const optInClicked = await clickIn('[data-ka-card="mock-spare"]', /参与保活/)
 await sleep(1_500)
-const feedbackText = await page.evaluate(() => {
-  const el = document.querySelector('[role="alert"]')
-  return el ? (el.textContent || '').trim() : null
-})
-step(
-  'action-feedback-banner',
-  feedbackText !== null && feedbackText.includes('已加入保活调度'),
-  'alert=' + JSON.stringify(feedbackText)
-)
-await page.screenshot({ path: OUT + '/browser-3b-feedback.png' })
+const feedbackText = await bodyText()
+step('action-feedback-toast', feedbackText.includes('已加入保活调度'), 'bodyHasToast=' + String(feedbackText.includes('已加入保活调度')))
 await sleep(2_500)
-// Probe: replay the identical POST from page context, then read back status.
-const probe = await page.evaluate(async () => {
-  const response = await fetch('/plugins/dsh-keepalive/config', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ providers: { 'mock-spare': { enabled: true } } })
-  })
-  return { status: response.status, body: await response.json().catch(() => null) }
-})
-results.configRequests.push('PROBE ' + JSON.stringify(probe))
-await sleep(6_000)
-const statusProbe = await fetch(WEB + '/plugins/dsh-keepalive/status').then((r) => r.json())
-results.configRequests.push('HOST config keys=' + JSON.stringify(Object.keys(statusProbe.config?.providers ?? {})) + ' spareEntry=' + JSON.stringify(statusProbe.config?.providers?.['mock-spare'] ?? null))
 const afterText = await bodyText()
 const anchor = afterText.indexOf('mock-spare')
 const spareSegment = anchor >= 0 ? afterText.slice(anchor, anchor + 200) : ''
-step(
-  'panel-opt-in-spare',
-  optInClicked !== null && /活跃/.test(spareSegment),
-  'clicked=' + JSON.stringify(optInClicked) + ' net=' + JSON.stringify(results.configRequests) + ' spareCard="' + spareSegment.replace(/\n/g, '|').slice(0, 120) + '"'
-)
+step('panel-opt-in-spare', optInClicked !== null && /活跃/.test(spareSegment), 'clicked=' + JSON.stringify(optInClicked) + ' spareCard="' + spareSegment.replace(/\n/g, '|').slice(0, 120) + '"')
 await page.screenshot({ path: OUT + '/browser-4-opted-in.png' })
 
-// Model dropdowns render for participating cards with real options.
-const selects = await page.$$eval('select', (nodes) => nodes.map((n) => ({ disabled: n.disabled, options: [...n.options].map((o) => o.value) })))
-const usableSelect = selects.some((s) => !s.disabled && s.options.length >= 2)
-step('model-dropdown-options', usableSelect, JSON.stringify(selects.slice(0, 4)))
-
-// History tab -> reply dialog shows the outbound message and model reply.
-await clickButton(/^历史$/)
-await sleep(2_500)
-const historyText = await bodyText()
-const viewClicked = await clickButton(/^查看$/)
+// Model picker: Menu opens, lists the mock model, selection saves.
+const modelClicked = await page.evaluate(() => {
+  const node = document.querySelector('[data-ka-card="mock-primary"] [data-ka="model-menu"]')
+  if (node) { node.click(); return (node.textContent || '').trim().slice(0, 40) }
+  return null
+})
+await sleep(800)
+const menuHasModel = await bodyText().then((t) => t.includes('mock-keepalive-model'))
+const itemClicked = await clickIn(null, /^mock-keepalive-model$/, { menuItems: true })
+await sleep(600)
+const saveClicked = await clickIn('[data-ka-card="mock-primary"]', /保存模型/)
 await sleep(1_500)
-const dialogText = await bodyText()
+const afterModelText = await bodyText()
 step(
-  'reply-dialog-content',
-  viewClicked !== null && dialogText.includes('发送内容'),
-  'view=' + JSON.stringify(viewClicked) + ' rows=' + String((historyText.match(/查看/g) || []).length)
+  'model-menu-select-save',
+  modelClicked !== null && menuHasModel && itemClicked !== null && saveClicked !== null && afterModelText.includes('已保存保活模型'),
+  'menu=' + JSON.stringify(modelClicked) + ' listed=' + String(menuHasModel) + ' item=' + JSON.stringify(itemClicked) + ' save=' + JSON.stringify(saveClicked) + ' toast=' + String(afterModelText.includes('已保存保活模型'))
 )
-await page.screenshot({ path: OUT + '/browser-5-reply-dialog.png' })
-await clickButton(/^关闭 ✕$/)
+await page.screenshot({ path: OUT + '/browser-4b-model-menu.png' })
 
-// Stats tab renders without errors.
-await clickButton(/^统计$/)
+// History section: expand, then expand one entry row in place.
+const histToggle = await page.evaluate(() => {
+  const section = document.querySelector('.ka-history-section')
+  if (section === null) return null
+  const node = [...section.querySelectorAll('button, [class*="row" i], [class*="title" i]')].find((n) => /历史（/.test((n.textContent || '').trim()))
+  if (node) { node.click(); return (node.textContent || '').trim().slice(0, 40) }
+  return null
+})
+await sleep(2_500)
+const entryToggle = await page.evaluate(() => {
+  const row = document.querySelector('.ka-history-entry')
+  if (row === null) return null
+  const node = [...row.querySelectorAll('button, [class*="row" i], [class*="title" i]')].find((n) => /·/.test((n.textContent || '').trim()))
+  if (node) { node.click(); return (node.textContent || '').trim().slice(0, 60) }
+  return null
+})
+await sleep(1_200)
+const detailText = await bodyText()
+step(
+  'history-inline-reply',
+  histToggle !== null && entryToggle !== null && detailText.includes('发送内容') && detailText.includes('模型回复'),
+  'section=' + JSON.stringify(histToggle) + ' entry=' + JSON.stringify(entryToggle) + ' detail=' + String(detailText.includes('发送内容'))
+)
+await page.screenshot({ path: OUT + '/browser-5-history-inline.png' })
+
+// Stats section expands with per-day numbers.
+const statsToggle = await page.evaluate(() => {
+  const section = document.querySelector('.ka-stats-section')
+  if (section === null) return null
+  const node = [...section.querySelectorAll('button, [class*="row" i], [class*="title" i]')].find((n) => /统计/.test((n.textContent || '').trim()))
+  if (node) { node.click(); return (node.textContent || '').trim().slice(0, 40) }
+  return null
+})
 await sleep(1_200)
 const statsText = await bodyText()
-step('stats-tab-renders', /成功|尚无/.test(statsText), 'hasStatsCopy=' + String(/成功/.test(statsText)))
+const statRows = await page.evaluate(() => document.querySelectorAll('[data-ka="stat-row"]').length)
+step('stats-section-renders', statsToggle !== null && /成功/.test(statsText) && statRows > 0, 'rows=' + String(statRows))
 await page.screenshot({ path: OUT + '/browser-6-stats.png' })
+
+// Secondary menu: removal flows through RiskConfirmation and cancels cleanly.
+const moreClicked = await page.evaluate(() => {
+  const node = document.querySelector('[data-ka-card="mock-backup"] [data-ka="more-menu"]')
+  if (node) { node.click(); return 'more' }
+  return null
+})
+await sleep(800)
+const removeClicked = await clickIn(null, /移除配置/, { menuItems: true })
+await sleep(800)
+const confirmText = await bodyText()
+const riskShown = confirmText.includes('移除该提供商的保活配置')
+let cancelled = false
+if (riskShown) {
+  const cancel = await clickIn(null, /^取消$/)
+  await sleep(600)
+  cancelled = (await bodyText()).includes('移除该提供商的保活配置') === false
+}
+step('risk-confirmation-flow', moreClicked !== null && removeClicked !== null && riskShown && cancelled, 'more=' + String(moreClicked !== null) + ' item=' + JSON.stringify(removeClicked) + ' risk=' + String(riskShown) + ' cancelled=' + String(cancelled))
+await page.screenshot({ path: OUT + '/browser-7-risk-confirm.png' })
+
+// Config form present with numeric fields (global config unchanged).
+const cfgOk = await page.evaluate(() => {
+  const fields = ['cfg-interval', 'cfg-jitter', 'cfg-threshold', 'cfg-autopark', 'cfg-save']
+  return fields.map((id) => [id, document.querySelector('[data-ka="' + id + '"]') !== null])
+})
+step('config-form-present', cfgOk.every(([, ok]) => ok), JSON.stringify(cfgOk.filter(([, ok]) => !ok).map(([id]) => id)))
+await page.screenshot({ path: OUT + '/browser-8-final.png' })
 
 writeFileSync(OUT + '/browser-evidence.json', JSON.stringify(results, null, 2))
 step('no-runtime-errors', results.consoleErrors.length === 0, JSON.stringify(results.consoleErrors.slice(0, 4)))
-console.log('BROWSER RESULT: ' + (results.steps.every((s) => s.pass) ? 'ALL PASS' : 'PARTIAL: ' + results.steps.filter((s) => !s.pass).map((s) => s.name).join(',')))
+console.log('BROWSER RESULT: ' + (failed === 0 ? 'ALL PASS' : 'FAILED: ' + failed))
 await browser.close()
+process.exit(failed === 0 ? 0 : 1)
