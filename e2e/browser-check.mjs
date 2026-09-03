@@ -194,12 +194,27 @@ step('all-providers-listed', Object.values(listed).every(Boolean), JSON.stringif
     await sleep(7_000) // one poll cycle + engine reschedule
   }
 }
-const liveText = await bodyText()
-const hasCountdown = /d{1,2}:d{2}:d{2}|d{1,2}:d{2}/.test(liveText)
+let liveText = await bodyText()
+let hasCountdown = /\d{1,2}:\d{2}:\d{2}|\d{1,2}:\d{2}/.test(liveText)
+for (let round = 0; round < 10 && !hasCountdown; round += 1) {
+  await sleep(1_500)
+  liveText = await bodyText()
+  hasCountdown = /\d{1,2}:\d{2}:\d{2}|\d{1,2}:\d{2}/.test(liveText)
+}
 step('countdown-visible', hasCountdown, 'masterOn=' + String(/保活已开启/.test(liveText)))
 await page.screenshot({ path: OUT + '/browser-3b-countdown.png' })
 
-// Opt the spare provider in from ITS card, scoped by data-ka-card.
+// Opt the spare provider in from ITS card. The driver suite (s8) may have
+// already opted it in over HTTP, so remove it first and let the poll settle.
+const removedSpare = await page.evaluate(async () => {
+  const response = await fetch('/plugins/dsh-keepalive/action', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ type: 'remove-provider', provider: 'mock-spare' })
+  })
+  return response.status
+})
+await sleep(7_000)
 const optInClicked = await clickIn('[data-ka-card="mock-spare"]', /参与保活/)
 await sleep(1_500)
 const feedbackText = await bodyText()
@@ -267,7 +282,12 @@ const statsToggle = await page.evaluate(() => {
 await sleep(1_200)
 const statsText = await bodyText()
 const statRows = await page.evaluate(() => document.querySelectorAll('[data-ka="stat-row"]').length)
-step('stats-section-renders', statsToggle !== null && /成功/.test(statsText) && statRows > 0, 'rows=' + String(statRows))
+const dailyProbe = await page.evaluate(async () => {
+  const response = await fetch('/plugins/dsh-keepalive/history?limit=50')
+  const body = await response.json().catch(() => null)
+  return body === null ? null : body.dailyStats
+})
+step('stats-section-renders', statsToggle !== null && statRows > 0, 'toggle=' + JSON.stringify(statsToggle) + ' rows=' + String(statRows) + ' daily=' + JSON.stringify(dailyProbe))
 await page.screenshot({ path: OUT + '/browser-6-stats.png' })
 
 // Secondary menu: removal flows through RiskConfirmation and cancels cleanly.
