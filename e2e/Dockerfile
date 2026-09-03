@@ -18,9 +18,10 @@ WORKDIR /plugin
 COPY . .
 RUN pnpm install && pnpm run build
 
-# E2E assets + isolated harness home.
+# E2E assets + isolated harness home. The node_modules symlink lets the
+# browser-check import puppeteer-core (an installed devDependency of /plugin).
 COPY e2e/ /e2e/
-RUN mkdir -p /e2e/dsh-home /e2e/evidence
+RUN mkdir -p /e2e/dsh-home /e2e/evidence   && ln -s /plugin/node_modules /e2e/node_modules
 ENV DSH_HOME=/e2e/dsh-home
 
 WORKDIR /e2e
