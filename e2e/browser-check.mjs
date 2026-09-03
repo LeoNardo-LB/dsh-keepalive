@@ -95,8 +95,8 @@ for (let round = 0; round < 6; round += 1) {
 }
 await page.screenshot({ path: OUT + '/browser-1-landing.png' })
 
-// dsh 0.1.2 boots into the workspace chooser; pick the standard seat to
-// reach the main app before any settings navigation is possible.
+// dsh 0.1.2 boots into the workspace chooser: choose a directory (Home ->
+// Open), then the Standard seat, to reach the main app.
 {
   const chooserText = await bodyText()
   if (/Choose a workspace/.test(chooserText)) {
@@ -106,10 +106,20 @@ await page.screenshot({ path: OUT + '/browser-1-landing.png' })
       return null
     })
     await sleep(1_500)
-    const seat = await clickIn(null, /^(Standard mode|Into the Unknown)$/)
+    const home = await page.evaluate(() => {
+      const nodes = [...document.querySelectorAll('button, [role="button"], li, [class*="entry" i], [class*="row" i]')]
+      const node = nodes.find((n) => ((n.textContent) || '').trim() === 'Home')
+      if (node) { node.click(); return 'home' }
+      return null
+    })
+    await sleep(1_000)
+    const open = await clickIn(null, /^Open$/)
+    await sleep(2_500)
+    writeFileSync(OUT + '/dom-ws-after-open.txt', (await bodyText()).slice(0, 3000))
+    const seat = await clickIn(null, /^Standard mode$/)
     await sleep(4_000)
     writeFileSync(OUT + '/dom-after-workspace.txt', (await bodyText()).slice(0, 3000))
-    results.workspacePick = seat
+    results.workspacePick = { home, open, seat }
   }
 }
 
