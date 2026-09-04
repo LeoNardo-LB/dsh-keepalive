@@ -38,7 +38,15 @@ node /e2e/browser-check.mjs
 BROWSER_EXIT=$?
 set -e
 
-echo '=== [6/6] dsh log tail ==='
+echo '=== [6/6] storage dump + dsh log tail ==='
+echo '--- storage files ---'
+find "$DSH_HOME/storages" -type f 2>/dev/null | head -8 || true
+for f in $(find "$DSH_HOME/storages" -type f -name '*.json' 2>/dev/null | head -4); do
+  echo "--- $f (first 600B)"
+  head -c 600 "$f" || true
+  echo
+done
+echo '--- dsh log tail ---'
 tail -n 30 /e2e/evidence/dsh-web.log || true
 
 [ "$DRIVER_EXIT" -eq 0 ] && [ "$BROWSER_EXIT" -eq 0 ] || exit 1
