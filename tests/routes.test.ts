@@ -100,6 +100,32 @@ describe('routes config', () => {
     await routes.config(fakeReq({ intervalMinutes: 0.2 }), box.res)
     expect(calls.update).toEqual([{ intervalMinutes: 1 }])
   })
+  it('forwards a valid autoPause patch intact (#7)', async () => {
+    const { routes, calls } = makeDeps()
+    const box = fakeRes()
+    await routes.config(fakeReq({ autoPause: { enabled: false, threshold: 3 } }), box.res)
+    expect(box.statusCode).toBe(200)
+    expect(calls.update).toEqual([{ autoPause: { enabled: false, threshold: 3 } }])
+  })
+  it('forwards the full save payload without dropping autoPause (#7)', async () => {
+    const { routes, calls } = makeDeps()
+    const box = fakeRes()
+    await routes.config(fakeReq({ intervalMinutes: 20, jitterPercent: 30, autoPause: { enabled: true, threshold: 3 } }), box.res)
+    expect(box.statusCode).toBe(200)
+    expect(calls.update).toEqual([{ intervalMinutes: 20, jitterPercent: 30, autoPause: { enabled: true, threshold: 3 } }])
+  })
+  it('rejects autoPause with a sub-one threshold with 400 (#7)', async () => {
+    const { routes } = makeDeps()
+    const box = fakeRes()
+    await routes.config(fakeReq({ autoPause: { enabled: true, threshold: 0 } }), box.res)
+    expect(box.statusCode).toBe(400)
+  })
+  it('rejects autoPause with a non-boolean enabled with 400 (#7)', async () => {
+    const { routes } = makeDeps()
+    const box = fakeRes()
+    await routes.config(fakeReq({ autoPause: { enabled: 1, threshold: 5 } }), box.res)
+    expect(box.statusCode).toBe(400)
+  })
 })
 
 describe('routes action', () => {

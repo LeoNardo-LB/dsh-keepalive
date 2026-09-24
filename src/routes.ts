@@ -138,6 +138,19 @@ export function createRoutes(deps: RoutesDeps): RouteHandlers {
       }
       patch.jitterPercent = raw.jitterPercent
     }
+    if (raw.autoPause !== undefined) {
+      const autoPause = raw.autoPause
+      if (autoPause === null || typeof autoPause !== 'object' || Array.isArray(autoPause)
+        || typeof (autoPause as Record<string, unknown>).enabled !== 'boolean'
+        || typeof (autoPause as Record<string, unknown>).threshold !== 'number'
+        || !Number.isFinite((autoPause as Record<string, unknown>).threshold as number)
+        || ((autoPause as Record<string, unknown>).threshold as number) < 1) {
+        sendJson(res, 400, { error: 'autoPause must be { enabled: boolean, threshold: number >= 1 }' })
+        return
+      }
+      const { enabled, threshold } = autoPause as { enabled: boolean, threshold: number }
+      patch.autoPause = { enabled, threshold: Math.floor(threshold) }
+    }
     if (raw.providers !== undefined) {
       const providers = parseProviders(raw.providers)
       if (providers === undefined) {
