@@ -13,11 +13,21 @@ export function ConfigForm(props: { config: KeepaliveConfig; store: KeepaliveSto
   const [interval, setIntervalValue] = useState(String(config.intervalMinutes))
   const [jitter, setJitter] = useState(String(config.jitterPercent))
   const [threshold, setThreshold] = useState(String(config.autoPause.threshold))
+  // Unsaved user edits are sacred: while any field differs from the polled
+  // config, the 5s status poll must not echo server values over them (#8).
+  const dirty = interval !== String(config.intervalMinutes)
+    || jitter !== String(config.jitterPercent)
+    || threshold !== String(config.autoPause.threshold)
   useEffect(() => {
+    if (dirty) return
     setIntervalValue(String(config.intervalMinutes))
     setJitter(String(config.jitterPercent))
     setThreshold(String(config.autoPause.threshold))
-  }, [config])
+  }, [config, dirty])
+  const parsed = { interval: Number(interval), jitter: Number(jitter), threshold: Number(threshold) }
+  const valid = Number.isFinite(parsed.interval) && parsed.interval >= 1
+    && Number.isFinite(parsed.jitter) && parsed.jitter >= 0 && parsed.jitter <= 100
+    && Number.isFinite(parsed.threshold) && parsed.threshold >= 1
   const autoParkOn = config.autoPause.enabled === true
   return (
     <div className="ka-form-row">
@@ -46,7 +56,7 @@ export function ConfigForm(props: { config: KeepaliveConfig; store: KeepaliveSto
         data-ka="cfg-save"
         variant="primary"
         size="sm"
-        disabled={props.pending['config'] === true}
+        disabled={props.pending['config'] === true || !valid}
         onClick={() => {
           void store.updateConfig(
             {
