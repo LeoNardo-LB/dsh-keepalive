@@ -44,6 +44,59 @@ const NAMESPACE: SettingsNamespace = nsFactory !== undefined
   ? nsFactory('dsh-keepalive')
   : ('dsh-keepalive' as SettingsNamespace)
 
+/**
+ * The profile entry id this plugin is inserted under (cordis.patch.yml).
+ * Hosts from 0.1.7 address writable plugin config by this entry id.
+ */
+const ENTRY_ID = 'dsh-keepalive'
+
+/** Host-facing config access, uniform across settings generations. */
+interface SettingsPort {
+  get(): KeepaliveConfig
+  update(patch: object): Promise<void>
+  removeProvider(id: string): Promise<void>
+  watch(onChange: () => void): () => void
+  /**
+   * Entry-model hosts deliver writes as in-place volatile updates whose
+   * reschedule signal (loader/volatile-update) only helps once watch is
+   * armed, so prefill runs late on that path (spec #6 节 2/节 3).
+   */
+  readonly prefillAfterWatch: boolean
+}
+
+/**
+ * Build the settings port for the running host generation. Legacy hosts
+ * (0.1.1-rc.2 / 0.1.2-alpha.5) expose register()/SettingsScope; hosts from
+ * 0.1.7 expose SettingsForms.update/mutate over profile entries and
+ * propagate writes as loader volatile updates that mutate the live config
+ * object without remounting this entry. Type truth stays the oldest
+ * supported peer; newer-generation casts are confined to this seam.
+ */
+function buildSettingsPort(ctx: Context, config: Partial<KeepaliveConfig>, legacy: boolean): SettingsPort {
+  if (legacy) {
+    const scope: SettingsScope<KeepaliveConfig> = ctx.settings.register(NAMESPACE, Config, { base: config })
+    return {
+      get: () => scope.get(),
+      update: (patch) => scope.update(patch),
+      removeProvider: (id) => ctx.settings.mutate(NAMESPACE, [{ op: 'unset', path: ['providers', id] }]),
+      watch: (onChange) => scope.watch(onChange),
+      prefillAfterWatch: false
+    }
+  }
+  const forms = ctx.settings as unknown as {
+    update(ns: string, patch: object): Promise<void>
+    mutate(ns: string, ops: { op: 'unset', path: string[] }[]): Promise<void>
+  }
+  const live = config as KeepaliveConfig
+  return {
+    get: () => live,
+    update: (patch) => forms.update(ENTRY_ID, patch),
+    removeProvider: (id) => forms.mutate(ENTRY_ID, [{ op: 'unset', path: ['providers', id] }]),
+    watch: (onChange) => ctx.on('loader/volatile-update' as never, onChange as never) as unknown as () => void,
+    prefillAfterWatch: true
+  }
+}
+
 function localDay(at: number): string {
   const date = new Date(at)
   const pad = (value: number): string => String(value).padStart(2, '0')
@@ -85,16 +138,21 @@ export function apply(ctx: Context, config: Partial<KeepaliveConfig> = {}): void
   }
 
   const init = async (): Promise<void> => {
-    const scope: SettingsScope<KeepaliveConfig> = ctx.settings.register(NAMESPACE, Config, { base: config })
+    const legacyRegister = (ctx.settings as { register?: unknown }).register
+    const port = buildSettingsPort(ctx, config, typeof legacyRegister === 'function')
 
     // First run: prefill the provider map with every registered route so the
     // user only flips the master switch (master stays OFF until confirmed).
-    if (Object.keys(scope.get().providers ?? {}).length === 0) {
+    // Legacy scope reads are immediate; the entry model propagates the write
+    // as a volatile update, so prefill there runs after watch is armed.
+    const prefill = async (): Promise<void> => {
+      if (Object.keys(port.get().providers ?? {}).length > 0) return
       const routes = ctx.llm.listProviders()
       const providers: Record<string, { enabled: boolean }> = {}
       for (const route of routes) providers[route.id] = { enabled: true }
-      if (Object.keys(providers).length > 0) await scope.update({ providers })
+      if (Object.keys(providers).length > 0) await port.update({ providers })
     }
+    if (!port.prefillAfterWatch) await prefill()
 
     const domain = (await ctx.storageDomain.open(keepaliveDomain)) as unknown as OpenedDomain
     ctx.effect(() => () => void Promise.resolve(domain.close()).catch(() => undefined))
@@ -142,7 +200,7 @@ export function apply(ctx: Context, config: Partial<KeepaliveConfig> = {}): void
     }
 
     const resolveModel = async (provider: string): Promise<string | null> => {
-      const configured = scope.get().providers[provider]?.model
+      const configured = port.get().providers[provider]?.model
       if (typeof configured === 'string' && configured.length > 0) return configured
       const models = await ctx.llm.listModels(provider)
       return models[0]?.id ?? null
@@ -153,7 +211,7 @@ export function apply(ctx: Context, config: Partial<KeepaliveConfig> = {}): void
       scheduler: { timeout: (callback, delay) => ctx.timeout(callback, delay) },
       keeper,
       resolveModel,
-      config: () => scope.get(),
+      config: () => port.get(),
       onShot,
       persistNextFire,
       loadNextFire: () => domain.global.get().nextFireAt ?? null,
@@ -166,12 +224,11 @@ export function apply(ctx: Context, config: Partial<KeepaliveConfig> = {}): void
 
     const routes = createRoutes({
       engine,
-      config: () => scope.get(),
-      updateConfig: (patch) => scope.update(patch),
+      config: () => port.get(),
       // Recursive-merge settings cannot delete keys via update; removal is a
       // path-addressed unset on the user layer through the provider's mutate.
-      removeProvider: (id) =>
-        ctx.settings.mutate(NAMESPACE, [{ op: 'unset', path: ['providers', id] }]),
+      updateConfig: (patch) => port.update(patch),
+      removeProvider: (id) => port.removeProvider(id),
       listAvailableProviders: () => ctx.llm.listProviders().map((route) => ({ id: route.id, name: route.name })),
       listModels: async (id) => (await ctx.llm.listModels(id)).map((model) => model.id),
       history: (limit, provider) => {
@@ -217,10 +274,11 @@ export function apply(ctx: Context, config: Partial<KeepaliveConfig> = {}): void
       'dsh-keepalive: models route'
     )
 
-    const disposeWatch = scope.watch(() => {
+    const disposeWatch = port.watch(() => {
       void engine.reschedule().catch((error: unknown) => logger.warn('dsh-keepalive: reschedule failed: ' + String(error)))
     })
     ctx.effect(() => disposeWatch, 'dsh-keepalive: settings watch')
+    if (port.prefillAfterWatch) await prefill()
 
     ctx.effect(() => () => engine.dispose(), 'dsh-keepalive: engine dispose')
     logger.info('dsh-keepalive: host half active')

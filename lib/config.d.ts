@@ -5,6 +5,11 @@
  */
 import z from '@deepseek-ai/schemastery';
 import type { KeepaliveConfig } from './types.ts';
-/** Runtime schema for the settings namespace shape. */
+/**
+ * Runtime schema for the settings namespace shape. The root is volatile:
+ * on the 0.1.7+ entry model every field is live-editable through the
+ * settings service, and writes mutate the running config object in place
+ * (loader volatile update) instead of remounting this entry.
+ */
 export declare const Config: z<KeepaliveConfig>;
 //# sourceMappingURL=config.d.ts.map

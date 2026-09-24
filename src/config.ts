@@ -12,7 +12,12 @@ const providerConfig = z.object({
   model: z.string()
 })
 
-/** Runtime schema for the settings namespace shape. */
+/**
+ * Runtime schema for the settings namespace shape. The root is volatile:
+ * on the 0.1.7+ entry model every field is live-editable through the
+ * settings service, and writes mutate the running config object in place
+ * (loader volatile update) instead of remounting this entry.
+ */
 export const Config = z.object({
   enabled: z.boolean().default(false),
   intervalMinutes: z.number().min(1).default(30),
@@ -22,4 +27,4 @@ export const Config = z.object({
     threshold: z.number().min(1).default(5)
   }),
   providers: z.dict(providerConfig)
-}) as unknown as z<KeepaliveConfig>
+}).volatile() as unknown as z<KeepaliveConfig>
