@@ -1,11 +1,3 @@
-/**
- * Single boundary to the host UI primitives served through the client
- * module table. Hard dependency (spec D2): when the host does not serve the
- * module the whole tab renders ONE error state; there are no per-component
- * fallbacks. Structural types below mirror the served surface (spec F3);
- * the package cannot be installed as a dependency (spec F2), so types are
- * vendored here.
- */
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
 export interface MenuItemShape {
     id: string;
@@ -132,7 +124,14 @@ export interface PrimitivesModule {
         className?: string;
     }) => ReactNode;
 }
-/** Loaded once at module evaluation; null only when the host omits the module. */
+/**
+ * Loaded once at module evaluation; null only when the host omits the module.
+ * Normalized ACROSS host generations: 0.1.7 renamed the icon exports
+ * (*14/*16 -> *Regular/*Medium) and replaced MessageText with MarkdownText
+ * (whose labels prop is required), so every concept resolves through a
+ * pick()-chain (new name first, old name for legacy hosts) and the message
+ * renderer gains a minimal labels adapter when only MarkdownText exists.
+ */
 export declare const P: PrimitivesModule | null;
 /**
  * Non-null view for components rendered BELOW the SettingsTab availability
