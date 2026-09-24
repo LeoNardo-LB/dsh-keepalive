@@ -87,9 +87,34 @@ function buildSettingsPort(ctx: Context, config: Partial<KeepaliveConfig>, legac
     update(ns: string, patch: object): Promise<void>
     mutate(ns: string, ops: { op: 'unset', path: string[] }[]): Promise<void>
   }
-  const live = config as KeepaliveConfig
+  // Entry-model hosts hand apply() a cosmokit volatile reference: with a
+  // root-volatile Config the whole config arrives as ONE root ref
+  // ({ get(): snapshot }) whose snapshot the owning runtime swaps on writes
+  // (verified on 0.1.7-rc.1; cf. agent-loop reading field refs via .get()).
+  // Read through the ref each call, then normalize field-by-field so schema
+  // defaults apply for absent keys (defaults mirror src/config.ts).
+  const live = config as unknown
+  const isRef = (value: unknown): value is { get(): unknown } =>
+    typeof value === 'object' && value !== null && 'get' in value
+  const readRaw = (): Partial<KeepaliveConfig> => {
+    const raw = isRef(live) ? live.get() : live
+    return (raw ?? {}) as Partial<KeepaliveConfig>
+  }
+  const readLive = (): KeepaliveConfig => {
+    const raw = readRaw()
+    return {
+      enabled: raw.enabled ?? false,
+      intervalMinutes: raw.intervalMinutes ?? 30,
+      jitterPercent: raw.jitterPercent ?? 20,
+      autoPause: {
+        enabled: raw.autoPause?.enabled ?? true,
+        threshold: raw.autoPause?.threshold ?? 5
+      },
+      providers: raw.providers ?? {}
+    }
+  }
   return {
-    get: () => live,
+    get: () => readLive(),
     update: (patch) => forms.update(ENTRY_ID, patch),
     removeProvider: (id) => forms.mutate(ENTRY_ID, [{ op: 'unset', path: ['providers', id] }]),
     watch: (onChange) => ctx.on('loader/volatile-update' as never, onChange as never) as unknown as () => void,
@@ -150,7 +175,15 @@ export function apply(ctx: Context, config: Partial<KeepaliveConfig> = {}): void
       const routes = ctx.llm.listProviders()
       const providers: Record<string, { enabled: boolean }> = {}
       for (const route of routes) providers[route.id] = { enabled: true }
-      if (Object.keys(providers).length > 0) await port.update({ providers })
+      if (Object.keys(providers).length === 0) return
+      // Non-fatal: an overlay/home-patch override of this entry refuses
+      // persistent writes ("overridden by a home patch or command-line
+      // overlay"); the panel's opt-in flow covers that case instead.
+      try {
+        await port.update({ providers })
+      } catch (error) {
+        logger.warn('dsh-keepalive: provider prefill skipped: ' + String(error))
+      }
     }
     if (!port.prefillAfterWatch) await prefill()
 
