@@ -1,7 +1,7 @@
 # 宿主 0.1.7 适配：settings SettingsForms 迁移设计（#6）
 
 日期：2026-09-24
-状态：草稿
+状态：已实施（自动化绿，真机验收待做）
 位置约定：active 位于 docs/specs/；实现并验收后移入 docs/archive/specs/ 并更新本行与 backlog 卡片引用路径
 
 ## 背景与目标
@@ -90,3 +90,4 @@
 ## 变更记录
 
 - 2026-09-24：初稿（登记自宿主 0.1.7-rc.1 升级评估会话，证据见"已探测事实"）
+- 2026-09-24：实施定稿——节 2 的 ns 落定为条目 id `dsh-keepalive`（cordis.patch.yml insert id，无需 describe 枚举）；节 3 补 watch 机制：`loader/volatile-update` 事件（fiber 限定，仅本插件收到），替代 scope.watch；Config 根整体 volatile（节 1 的条目注入即活配置对象，写入原地生效、条目不重载）。证据见 journal 2026-09-24-host-017-adaptation

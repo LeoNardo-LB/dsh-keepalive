@@ -37,17 +37,17 @@
   - 已实施 0.1.0-dev.2（commit f9ff414）：全部自动化验证绿——typecheck + 58 单测 + build + **docker e2e 双宿主双轮 8/8 PASS**（rc.2 与 alpha.5 镜像）
   - 待用户验收后迁移 journal；→ 设计全文：workspace/2026-09-02-dsh插件矩阵统一改造-to-spec.md
 
-- [ ] **#6 宿主 0.1.7 适配：settings SettingsForms 迁移** `refactor` `feat`
+- [~] **#6 宿主 0.1.7 适配：settings SettingsForms 迁移** `refactor` `feat`
   - 0.1.7-rc.1 移除 ctx.settings.register/SettingsScope，插件初始化即失败自禁用；需迁移到 profile 条目配置 + SettingsForms.update，运行时探测双宿主，e2e 扩三轮
   - → 详情与证据：docs/specs/2026-09-24-host-v017-adaptation.md
 
 ## P2 — 优化与锦上添花
 
-- [ ] **#7 设置保存静默丢弃 autoPause——停放阈值与自动停放开关在 GUI 完全失效** `data`
+- [~] **#7 设置保存静默丢弃 autoPause——停放阈值与自动停放开关在 GUI 完全失效** `data`
   - POST /config 路由逐键白名单漏掉 autoPause：HTTP 200 + 成功 toast，但 patch 从未落 settings（对照组 interval/jitter 正常）
   - → 详情与证据：docs/specs/2026-09-24-settings-panel-defects.md
 
-- [ ] **#8 轮询回显覆盖未保存编辑——三个配置输入框 ≤5 秒被打回原值** `ui` `state`
+- [~] **#8 轮询回显覆盖未保存编辑——三个配置输入框 ≤5 秒被打回原值** `ui` `state`
   - CLIENT 每 5s 轮询 /status 产生新 config 引用，ConfigForm useEffect([config]) 无条件回填，未保存输入被清
   - → 详情与证据：docs/specs/2026-09-24-settings-panel-defects.md
 

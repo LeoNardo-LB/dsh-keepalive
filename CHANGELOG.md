@@ -19,6 +19,17 @@
 
 - HTTP 面：`GET /plugins/dsh-keepalive/models`（逐提供商模型列表；单路由枚举失败不拖垮整体）。
 
+## [0.1.0-dev.3] - 2026-09-24
+
+### 变更
+
+- **宿主 0.1.7 适配（#6）**：settings 读取/写入经运行时能力探测分流——legacy 宿主（0.1.1-rc.2 / 0.1.2-alpha.5）走 register/SettingsScope，0.1.7+ 走 SettingsForms.update/mutate（条目 id `dsh-keepalive`）；Config 根标记 volatile，写入经 loader 原地生效（条目不重载），变更监听改 `loader/volatile-update` 事件；peerDependencies 追加 `^0.1.7-rc.1 || ^0.1.7`，schemastery 升 ~3.18.4。
+
+### 修复
+
+- 设置保存静默丢弃 autoPause：POST /config 路由白名单补 autoPause 校验分支（enabled 布尔 + threshold ≥1，非法 400），停放阈值与自动停放开关恢复可改（#7）。
+- 轮询回显覆盖未保存编辑：ConfigForm 增加 dirty 守卫（任一字段与服务端值不一致时拒绝 5s 回显回填），字段非法时禁用保存按钮（#8）。
+
 ## [0.1.0-dev.1] - 2026-08-25
 
 ### 新增
