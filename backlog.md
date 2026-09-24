@@ -4,7 +4,7 @@
 
 **卡片格式**：标题（含全局编号）+ Tag + 状态 checkbox + ≤3 行摘要 + 链接。需求全文、实现要点、验证证据一律写在链接目标（spec/journal）中，不内联。登记新批次用 new-batch.sh（自动建 journal 文件）；改动后跑 check.sh --deployed 校验机械不变量。
 
-**编号**：全局递增，不回收。下一编号：**#9**。
+**编号**：全局递增，不回收。下一编号：**#10**。
 
 **优先级定义**（P0-P3 唯一归宿：系统 workflows/requirements.md「优先级定义」节）：
 
@@ -56,3 +56,7 @@
   - → 触发条件：用户创建 github 仓库时
 
 ## P3 — 观察与低价值改进
+
+- [ ] **#9 legacy 宿主 e2e 矩阵受阻于 npm registry 漂移** `chore`
+  - 0.1.1-rc.2/0.1.2-alpha.5 轮今日无法组装时代精确环境：dsh 传递依赖浮动解析到新版（hmr 竞态、cosmokit createVolatile 断链），agent-team 包已从 registry 消失；#4 原镜像复跑同样失败（非插件回归）
+  - → 详情与证据：docs/journal/2026-09-24-host-017-adaptation.md（矩阵终局节）；出路：私有包镜像/锁集沉淀，依赖外部条件
