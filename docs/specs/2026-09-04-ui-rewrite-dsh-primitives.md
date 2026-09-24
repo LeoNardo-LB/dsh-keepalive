@@ -28,7 +28,7 @@
 | D9 | 砍 0.1.1-rc.2 CLIENT 兼容（硬依赖 primitives 的自然后果；HOST 半兼容层不动） | R1-Q4 |
 | D10 | i18n 维持硬编码中文（登记技术债，不扩本次 scope） | Round 1 备注 |
 
-## 四态纪律（ui-conventions §4）
+## 四态纪律（ui-conventions 第 4 节）
 
 加载中（status null 且无 error）= 文案行；错误 = 文案 + 重试 Button；空（无提供商/无历史）= 引导文案；禁用 = Button disabled（pending 键驱动）。自定义动效为零 → prefers-reduced-motion 天然满足。
 
