@@ -163,7 +163,11 @@ if (!/插件|通用设置|Plugins|General/i.test(afterSettingsText)) {
 step('settings-window-opens', settingsClick !== null && /插件|通用设置|Plugins|General/i.test(afterSettingsText), 'clicked=' + JSON.stringify(settingsClick))
 await page.screenshot({ path: OUT + '/browser-2-settings.png' })
 
-const pluginsClick = await clickIn(null, /^(插件|Plugins)$/u)
+// 0.1.7 renamed the settings section "Plugins" -> "Built-in plugins"
+// (the main-sidebar "Plugins" is the separate plugin-manager page, so try
+// the new exact name first and only fall back on older hosts).
+let pluginsClick = await clickIn(null, /^(Built-in plugins|内置插件)$/u)
+if (pluginsClick === null) pluginsClick = await clickIn(null, /^(插件|Plugins)$/u)
 await sleep(1_500)
 step('plugins-section-open', pluginsClick !== null, 'clicked=' + JSON.stringify(pluginsClick))
 

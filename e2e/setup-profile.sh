@@ -25,12 +25,16 @@ WS_EOF
 
 dsh plugin --profile web add /plugin
 
-cat > /e2e/e2e-overlay.yml << OVERLAY_EOF
-# E2E overlay: mock providers + keepalive cadence. The plugin row itself is
-# inserted by the bundle layer (dsh plugin add reconciled the package patch);
-# this overlay only OVERRIDES its config by id (a second insert would be a
-# duplicate loader entry id and fail loud at boot).
-- id: dsh-keepalive
+# Keepalive cadence placement is host-generation dependent:
+# - hosts from 0.1.7: PROFILE USER LAYER. The settings service refuses
+#   persistent writes for entries overridden by a command-line overlay
+#   ("Configuration ... is overridden"), which would 500 every opt-in /
+#   model-save / config-save flow the browser check drives.
+# - legacy hosts (0.1.1-rc.2 / 0.1.2-alpha.5): the --patch OVERLAY. A user
+#   patch-layer file there requires the Cordis HMR service this minimal
+#   profile does not carry ("user patch-layer watching requires the Cordis
+#   HMR service"), so keep the legacy shape: overlay row, no user layer.
+KEEPALIVE_ROW='- id: dsh-keepalive
   config:
     enabled: true
     intervalMinutes: 1
@@ -39,7 +43,24 @@ cat > /e2e/e2e-overlay.yml << OVERLAY_EOF
       mock-primary:
         enabled: true
       mock-backup:
-        enabled: true
+        enabled: true'
+HOST_VER="$(dsh --version 2>/dev/null | tr -d '[:space:]')"
+case "$HOST_VER" in
+  0.1.[123456]*)
+    OVERLAY_KEEPALIVE="$KEEPALIVE_ROW"
+    ;;
+  *)
+    printf '%s\n' "$KEEPALIVE_ROW" > "$PROFILE_DIR/cordis.patch.yml"
+    OVERLAY_KEEPALIVE=''
+    ;;
+esac
+
+cat > /e2e/e2e-overlay.yml << OVERLAY_EOF
+# E2E overlay: mock providers (+ keepalive cadence on legacy hosts). The
+# plugin row itself is inserted by the bundle layer (dsh plugin add
+# reconciled the package patch); on 0.1.7+ its cadence config rides the
+# profile user layer instead (see above).
+$OVERLAY_KEEPALIVE
 - id: llm-pi-ai
   config:
     providers:
