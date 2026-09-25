@@ -4,7 +4,7 @@
 
 **卡片格式**：标题（含全局编号）+ Tag + 状态 checkbox + ≤3 行摘要 + 链接。需求全文、实现要点、验证证据一律写在链接目标（spec/journal）中，不内联。登记新批次用 new-batch.sh（自动建 journal 文件）；改动后跑 check.sh --deployed 校验机械不变量。
 
-**编号**：全局递增，不回收。下一编号：**#10**。
+**编号**：全局递增，不回收。下一编号：**#11**。
 
 **优先级定义**（P0-P3 唯一归宿：系统 workflows/requirements.md「优先级定义」节）：
 
@@ -40,6 +40,10 @@
 - [~] **#6 宿主 0.1.7 适配：settings SettingsForms 迁移** `refactor` `feat`
   - 0.1.7-rc.1 移除 ctx.settings.register/SettingsScope，插件初始化即失败自禁用；需迁移到 profile 条目配置 + SettingsForms.update，运行时探测双宿主，e2e 扩三轮
   - → 详情与证据：docs/specs/2026-09-24-host-v017-adaptation.md
+
+- [ ] **#10 原生设置表单 replace 保存会静默丢弃保活总开关** `state` `data`
+  - 2026-09-25 实证：04:52 重启补发一枪后链条静默死亡——用户层 dsh-keepalive 行丢失 enabled 键（快照回落默认 false→调度清空）；同时段用户改过停放阈值(100)/禁用过 provider，任一经原生插件配置表单的 replace 语义保存（reset live fields→base 即 schema 默认，与默认同值的字段不落盘）都可把 enabled=true 洗掉
+  - → 出路：上游 replace 表单应加载实时值；插件侧可在面板对 enabled=false 且历史活跃的情况给出醒目提示；详情：journal 2026-09-24-host-017-adaptation 追记
 
 ## P2 — 优化与锦上添花
 

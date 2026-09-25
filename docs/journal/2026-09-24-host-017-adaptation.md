@@ -77,6 +77,14 @@
     私有镜像沉淀）；登记 backlog #9。legacy 兼容性以单测 legacy 路径用例
     （register/SettingsScope 分支）+ #4 历史全绿背书。
 
+- 真机验收追记（2026-09-25 12:0x）：
+  - 用户报告"25 号只发了一条"。勘查：服务 04:52:07 重启，04:52:55 补发一枪（ok 1598ms）后调度链清空——
+    /status 显示 enabled=false、storage nextFireAt={}、用户层行无 enabled 键（autoPause.threshold=100
+    已持久化，#7 生效；providers 含 deepseek-official: false）。
+  - 判定：某次配置保存走了 replace 语义（原生插件配置表单"reset live fields→base"，与默认同值字段
+    不落盘）把 enabled=true 洗掉；我们自己的面板全部走 update 合并，不可能丢该键。
+  - 处置：POST /config {enabled:true} 复活，链条武装（nextFireAt 12:36:10）；登记 #10。
+
 ## 完结迁移区
 
 <验收通过后：backlog 卡片原文逐字迁入此处（不压缩不删改），backlog 删除原卡片>
