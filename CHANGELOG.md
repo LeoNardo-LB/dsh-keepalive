@@ -6,6 +6,8 @@
 
 ### 变更
 
+- **宿主 0.2.0-rc.1 兼容声明**：peerDependencies 四项 dsh-* 宿主（dsh-host-webserver / dsh-llm / dsh-settings / dsh-storage-domain）追加 `|| ^0.2.0-rc.1`。静态实证：四个宿主包 0.1.7-rc.2 与 0.2.0-rc.1 的 npm 产物逐字节一致，插件消费的全部服务 API（SettingsForms.update/mutate、loader/volatile-update、llm/storageDomain/webServer）无变化，无代码改动。
+
 - **V1/V2 双宿主兼容（0.1.1-rc.2 ⇄ 0.1.2-alpha.5）**：host 半命名空间解析改 `in` 能力探测（V2 移除了 `settingsNamespace` 工厂）；client 半 `ClientContext` 类型源改 cordis 直取（rc.2 中它本就是 cordis `Context` 别名）；构建脚本 EXTERNALS 清除死条目；peerDependencies 声明联合区间。产物运行时行为零变化（详见 workspace/2026-09-02-dsh插件矩阵统一改造-to-spec.md 节 1-3）。
 
 - 配置界面整体迁入 DSH 原生设置窗口：新增 `settings.plugins.tab` 页签「提供商保活」；移除对话流 composer.dock 摘要条与 shell.overlay 面板。
